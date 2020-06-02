@@ -61,7 +61,6 @@ def cubic_bezier_sample(start, control1, control2, end):
 
     return (lambda t: np.array([t**3, t**2, t, 1]).dot(partial))
 
-bounds = [1000,-1000,1000,-1000]
 paths, attributes, svg_attributes = svg2paths2('test.svg')
 print("have {} paths".format(len(paths)))
 
@@ -85,44 +84,56 @@ for i,path in tqdm(enumerate(paths)):
 				new_paths.append(Line(points[k-1],points[k]))
 		else:
 			new_paths.append(Line(ele.start,ele.end))
-		if x1 < bounds[0]:
-			bounds[0] = x1 
-		if x2 < bounds[0]:
-			bounds[0] = x2
-		if x1 > bounds[1]:
-			bounds[1] = x1 
-		if x2 > bounds[1]:
-			bounds[1] = x2
-		if y1 < bounds[2]:
-			bounds[2] = y1 
-		if y2 < bounds[2]:
-			bounds[2] = y2
-		if y1 > bounds[3]:
-			bounds[3] = y1 
-		if y2 > bounds[3]:
-			bounds[3] = y2
 
 
 wsvg(new_paths,filename='output.svg')
 print("wrote image to output.svg")
 
-global last_point
-global segmenti
-
-last_point = [0,0]
-segments = []
-segment = []
+# deterine bounds
+bounds = [1000000,-100000,100000,-1000000]
 for i, ele in enumerate(new_paths):
 	x1 = np.real(ele.start)
 	y1 = np.imag(ele.start)
 	x2 = np.real(ele.end)
 	y2 = np.imag(ele.end)
+	if x1 < bounds[0]:
+		bounds[0] = x1 
+	if x2 < bounds[0]:
+		bounds[0] = x2
+	if x1 > bounds[1]:
+		bounds[1] = x1 
+	if x2 > bounds[1]:
+		bounds[1] = x2
+	if y1 < bounds[2]:
+		bounds[2] = y1 
+	if y2 < bounds[2]:
+		bounds[2] = y2
+	if y1 > bounds[3]:
+		bounds[3] = y1 
+	if y2 > bounds[3]:
+		bounds[3] = y2
+
+global last_point
+global segmenti
+
+# transform points
+print(bounds)
+last_point = [0,0]
+segments = []
+segment = []
+for i, ele in enumerate(new_paths):
+	x1 = round((np.real(ele.start) - bounds[0]) / (bounds[1]-bounds[0]) * 2000.0,1)
+	y1 = round((np.imag(ele.start) - bounds[2]) / (bounds[3]-bounds[2]) * 2000.0,1)
+	x2 = round((np.real(ele.end) - bounds[0]) / (bounds[1]-bounds[0]) * 2000.0,1)
+	y2 = round((np.imag(ele.end) - bounds[2]) / (bounds[3]-bounds[2]) * 2000.0,1)
 	if x1 != last_point[0] and y1 != last_point[1] and last_point[0] !=0 and last_point[1] !=0:
 		segments.append(segment)
 		segment = []
-	segment.append(ele)
+	segment.append(Line(complex(x1,y1),complex(x2,y2)))
 	last_point = [x2,y2]
 segments.append(segment)
+
+bounds = [0,2000,0,2000]
 
 print("have {} segments".format(len(segments)))
 print("first segment has {} lines".format(len(segments[0])))
@@ -140,7 +151,7 @@ for i,segment in enumerate(segments):
 			coords.append([x1,y1])
 		coords.append([x2,y2])
 	total_points_original += len(coords)
-	simplified = fuse(coords,10)
+	simplified = fuse(coords,5)
 	simplified = simplify_coords(coords, 10.0)
 	total_points_new += len(simplified)
 	for j,coord in enumerate(simplified):
