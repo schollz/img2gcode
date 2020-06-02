@@ -10,6 +10,7 @@
 # print(path_string)
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
+import matplotlib.colors as mcolors
 from matplotlib.animation import FuncAnimation
 from svgpathtools import svg2paths2, wsvg, Line
 import numpy as np
@@ -41,7 +42,7 @@ for i,path in enumerate(paths):
 		x2 = np.real(ele.end)
 		y2 = np.imag(ele.end)
 		if 'CubicBezier' in str(ele):
-			n_segments = 2
+			n_segments = 6
 			# get curve segment generator
 			curve = cubic_bezier_sample(ele.start, ele.control1, ele.control2,ele.end)
 			# get points on curve
@@ -70,10 +71,8 @@ for i,path in enumerate(paths):
 			bounds[3] = y2
 
 
-print("wrote image to output.svg")
 wsvg(new_paths,filename='output.svg')
-paths, attributes, svg_attributes = svg2paths2('output.svg')
-print("have {} paths".format(len(paths)))
+print("wrote image to output.svg")
 
 print(bounds)
 
@@ -85,7 +84,15 @@ print('fig size: {0} DPI, size in inches {1}'.format(
     fig.get_dpi(), fig.get_size_inches()))
 
 t = tqdm(total=len(new_paths)) 
+
+global last_point
+global segmenti
+last_point = [0,0]
+segmenti = 0
+colors = list(mcolors.TABLEAU_COLORS)
+
 def update(i):
+	global last_point, segmenti
 	t.update(1)
 	label = 'timestep {0}'.format(i)
 	ele = new_paths[i]
@@ -93,8 +100,12 @@ def update(i):
 	y1 = np.imag(ele.start)
 	x2 = np.real(ele.end)
 	y2 = np.imag(ele.end)
-	plt.plot([x1,x2],[y1,y2],'k-')
-	return _, ax
+	if x1 != last_point[0] and y1 != last_point[1]:
+		print("moved!")
+		segmenti = segmenti + 1
+	plt.plot([x1,x2],[y1,y2],'-',color=colors[segmenti % len(colors)])
+	last_point = [x2,y2]
+	return
 
 
 
