@@ -61,7 +61,7 @@ def cubic_bezier_sample(start, control1, control2, end):
 
     return (lambda t: np.array([t**3, t**2, t, 1]).dot(partial))
 
-paths, attributes, svg_attributes = svg2paths2('test.svg')
+paths, attributes, svg_attributes = svg2paths2('out.svg')
 print("have {} paths".format(len(paths)))
 
 
@@ -151,8 +151,8 @@ for i,segment in enumerate(segments):
 			coords.append([x1,y1])
 		coords.append([x2,y2])
 	total_points_original += len(coords)
-	simplified = fuse(coords,5)
-	simplified = simplify_coords(coords, 10.0)
+	simplified = fuse(coords,1)
+	simplified = simplify_coords(coords, 1.0)
 	total_points_new += len(simplified)
 	for j,coord in enumerate(simplified):
 		if j==0:
@@ -167,39 +167,41 @@ print("wrote image to output2.svg")
 
 print(bounds)
 
-fig, ax = plt.subplots()
-fig.set_tight_layout(True)
-plt.axis(bounds)
+# fig, ax = plt.subplots()
+# fig.set_tight_layout(True)
+# plt.axis(bounds)
 
-print('fig size: {0} DPI, size in inches {1}'.format(
-    fig.get_dpi(), fig.get_size_inches()))
+# print('fig size: {0} DPI, size in inches {1}'.format(
+#     fig.get_dpi(), fig.get_size_inches()))
 
-t = tqdm(total=len(new_new_paths)) 
+# t = tqdm(total=len(new_new_paths)) 
 
-last_point = [0,0]
-segmenti = 0
-colors = list(mcolors.TABLEAU_COLORS)
+# last_point = [0,0]
+# segmenti = 0
+# colors = list(mcolors.TABLEAU_COLORS)
 
-def update(i):
-	global last_point, segmenti
-	t.update(1)
-	label = 'timestep {0}'.format(i)
-	ele = new_new_paths[i]
-	x1 = np.real(ele.start)
-	y1 = np.imag(ele.start)
-	x2 = np.real(ele.end)
-	y2 = np.imag(ele.end)
-	if x1 != last_point[0] and y1 != last_point[1]:
-		print("moved!")
-		segmenti = segmenti + 1
-	plt.plot([x1,x2],[y1,y2],'-',color=colors[segmenti % len(colors)])
-	last_point = [x2,y2]
-	return
+# def update(i):
+# 	global last_point, segmenti
+# 	t.update(1)
+# 	label = 'timestep {0}'.format(i)
+# 	ele = new_new_paths[i]
+# 	x1 = np.real(ele.start)
+# 	y1 = np.imag(ele.start)
+# 	x2 = np.real(ele.end)
+# 	y2 = np.imag(ele.end)
+# 	if x1 != last_point[0] and y1 != last_point[1]:
+# 		print("moved!")
+# 		segmenti = segmenti + 1
+# 	plt.plot([x1,x2],[y1,y2],'-',color=colors[segmenti % len(colors)])
+# 	last_point = [x2,y2]
+# 	return
 
 
 
-anim = FuncAnimation(fig, update, frames=np.arange(0, len(new_new_paths)), interval=1)
-plt.show()
+# anim = FuncAnimation(fig, update, frames=np.arange(0, len(new_new_paths)), interval=1)
+# plt.show()
+
+
 # print('saving animation')
 # anim.save('line.gif', dpi=80, writer='imagemagick')
 # print("wrote draw pattern to line.gif")
