@@ -49,6 +49,21 @@ def fuse(points, d):
             ret.append((point[0], point[1]))
     return ret
 
+def fuse_linear(points,d):
+	ret = []
+	deleted = {}
+	for _,p1 in enumerate(points):
+		has_close_point = False 
+		for _,p2 in enumerate(ret):
+			if dist2(p1,p2) < d:
+				has_close_point = True
+				break
+		if not has_close_point:
+			ret.append(p1)
+	return ret 
+
+
+
 def cubic_bezier_sample(start, control1, control2, end):
     inputs = np.array([start, control1, control2, end])
     cubic_bezier_matrix = np.array([
@@ -152,8 +167,8 @@ for i,segment in enumerate(segments):
 		coords.append([x2,y2])
 	total_points_original += len(coords)
 	simplified = coords
+	# simplified = fuse_linear(simplified,15)
 	simplified = simplify_coords(simplified, 5.0)
-	# simplified = fuse(simplified,15)
 	if len(simplified) < 2:
 		continue
 	total_points_new += len(simplified)
