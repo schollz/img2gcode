@@ -151,8 +151,11 @@ for i,segment in enumerate(segments):
 			coords.append([x1,y1])
 		coords.append([x2,y2])
 	total_points_original += len(coords)
-	simplified = fuse(coords,3)
-	simplified = simplify_coords(coords, 5.0)
+	simplified = coords
+	simplified = simplify_coords(simplified, 5.0)
+	# simplified = fuse(simplified,15)
+	if len(simplified) < 2:
+		continue
 	total_points_new += len(simplified)
 	paths = Path()
 	for j,coord in enumerate(simplified):
