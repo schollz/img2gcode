@@ -139,6 +139,7 @@ print("first segment has {} lines".format(len(segments[0])))
 total_points_original = 0
 total_points_new = 0
 new_new_paths = []
+new_new_paths_flat = []
 for i,segment in enumerate(segments):
 	coords = []
 	for j,ele in enumerate(segment):
@@ -158,6 +159,7 @@ for i,segment in enumerate(segments):
 		if j==0:
 			continue
 		paths.append(Line(complex(simplified[j-1][0],simplified[j-1][1]),complex(simplified[j][0],simplified[j][1])))
+		new_new_paths_flat.append(Line(complex(simplified[j-1][0],simplified[j-1][1]),complex(simplified[j][0],simplified[j][1])))
 	new_new_paths.append(paths)
 
 print("had {} points ".format(total_points_original))
@@ -168,39 +170,39 @@ print("wrote image to output2.svg")
 
 print(bounds)
 
-# fig, ax = plt.subplots()
-# fig.set_tight_layout(True)
-# plt.axis(bounds)
+fig, ax = plt.subplots()
+fig.set_tight_layout(True)
+plt.axis(bounds)
 
-# print('fig size: {0} DPI, size in inches {1}'.format(
-#     fig.get_dpi(), fig.get_size_inches()))
+print('fig size: {0} DPI, size in inches {1}'.format(
+    fig.get_dpi(), fig.get_size_inches()))
 
-# t = tqdm(total=len(new_new_paths)) 
+t = tqdm(total=len(new_new_paths_flat)) 
 
-# last_point = [0,0]
-# segmenti = 0
-# colors = list(mcolors.TABLEAU_COLORS)
+last_point = [0,0]
+segmenti = 0
+colors = list(mcolors.TABLEAU_COLORS)
 
-# def update(i):
-# 	global last_point, segmenti
-# 	t.update(1)
-# 	label = 'timestep {0}'.format(i)
-# 	ele = new_new_paths[i]
-# 	x1 = np.real(ele.start)
-# 	y1 = np.imag(ele.start)
-# 	x2 = np.real(ele.end)
-# 	y2 = np.imag(ele.end)
-# 	if x1 != last_point[0] and y1 != last_point[1]:
-# 		print("moved!")
-# 		segmenti = segmenti + 1
-# 	plt.plot([x1,x2],[y1,y2],'-',color=colors[segmenti % len(colors)])
-# 	last_point = [x2,y2]
-# 	return
+def update(i):
+	global last_point, segmenti
+	t.update(1)
+	label = 'timestep {0}'.format(i)
+	ele = new_new_paths_flat[i]
+	x1 = np.real(ele.start)
+	y1 = np.imag(ele.start)
+	x2 = np.real(ele.end)
+	y2 = np.imag(ele.end)
+	if x1 != last_point[0] and y1 != last_point[1]:
+		print("moved!")
+		segmenti = segmenti + 1
+	plt.plot([x1,x2],[y1,y2],'-',color=colors[segmenti % len(colors)])
+	last_point = [x2,y2]
+	return
 
 
 
-# anim = FuncAnimation(fig, update, frames=np.arange(0, len(new_new_paths)), interval=1)
-# plt.show()
+anim = FuncAnimation(fig, update, frames=np.arange(0, len(new_new_paths_flat)), interval=1)
+plt.show()
 
 
 # print('saving animation')
