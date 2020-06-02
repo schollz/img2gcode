@@ -15,8 +15,39 @@ from matplotlib.animation import FuncAnimation
 from svgpathtools import svg2paths2, wsvg, Line
 import numpy as np
 from tqdm import tqdm
+from simplification.cutil import (
+    simplify_coords,
+    simplify_coords_idx,
+    simplify_coords_vw,
+    simplify_coords_vw_idx,
+    simplify_coords_vwp,
+)
 
 import sys
+
+def dist2(p1, p2):
+    return (p1[0]-p2[0])**2 + (p1[1]-p2[1])**2
+
+def fuse(points, d):
+    ret = []
+    d2 = d * d
+    n = len(points)
+    taken = [False] * n
+    for i in range(n):
+        if not taken[i]:
+            count = 1
+            point = [points[i][0], points[i][1]]
+            taken[i] = True
+            for j in range(i+1, n):
+                if dist2(points[i], points[j]) < d2:
+                    point[0] += points[j][0]
+                    point[1] += points[j][1]
+                    count+=1
+                    taken[j] = True
+            point[0] /= count
+            point[1] /= count
+            ret.append((point[0], point[1]))
+    return ret
 
 def cubic_bezier_sample(start, control1, control2, end):
     inputs = np.array([start, control1, control2, end])
@@ -34,8 +65,9 @@ bounds = [1000,-1000,1000,-1000]
 paths, attributes, svg_attributes = svg2paths2('test.svg')
 print("have {} paths".format(len(paths)))
 
+
 new_paths = []
-for i,path in enumerate(paths):
+for i,path in tqdm(enumerate(paths)):
 	for j,ele in enumerate(path):
 		x1 = np.real(ele.start)
 		y1 = np.imag(ele.start)
@@ -74,6 +106,54 @@ for i,path in enumerate(paths):
 wsvg(new_paths,filename='output.svg')
 print("wrote image to output.svg")
 
+global last_point
+global segmenti
+
+last_point = [0,0]
+segments = []
+segment = []
+for i, ele in enumerate(new_paths):
+	x1 = np.real(ele.start)
+	y1 = np.imag(ele.start)
+	x2 = np.real(ele.end)
+	y2 = np.imag(ele.end)
+	if x1 != last_point[0] and y1 != last_point[1] and last_point[0] !=0 and last_point[1] !=0:
+		segments.append(segment)
+		segment = []
+	segment.append(ele)
+	last_point = [x2,y2]
+segments.append(segment)
+
+print("have {} segments".format(len(segments)))
+print("first segment has {} lines".format(len(segments[0])))
+total_points_original = 0
+total_points_new = 0
+new_new_paths = []
+for i,segment in enumerate(segments):
+	coords = []
+	for j,ele in enumerate(segment):
+		x1 = np.real(ele.start)
+		y1 = np.imag(ele.start)
+		x2 = np.real(ele.end)
+		y2 = np.imag(ele.end)
+		if j == 0:
+			coords.append([x1,y1])
+		coords.append([x2,y2])
+	total_points_original += len(coords)
+	simplified = fuse(coords,10)
+	simplified = simplify_coords(coords, 10.0)
+	total_points_new += len(simplified)
+	for j,coord in enumerate(simplified):
+		if j==0:
+			continue
+		new_new_paths.append(Line(complex(simplified[j-1][0],simplified[j-1][1]),complex(simplified[j][0],simplified[j][1])))
+
+print("had {} points ".format(total_points_original))
+print("now have {} points".format(total_points_new))
+print("now have {} lines".format(len(new_new_paths)))
+wsvg(new_new_paths,filename='output2.svg')
+print("wrote image to output2.svg")
+
 print(bounds)
 
 fig, ax = plt.subplots()
@@ -83,10 +163,8 @@ plt.axis(bounds)
 print('fig size: {0} DPI, size in inches {1}'.format(
     fig.get_dpi(), fig.get_size_inches()))
 
-t = tqdm(total=len(new_paths)) 
+t = tqdm(total=len(new_new_paths)) 
 
-global last_point
-global segmenti
 last_point = [0,0]
 segmenti = 0
 colors = list(mcolors.TABLEAU_COLORS)
@@ -95,7 +173,7 @@ def update(i):
 	global last_point, segmenti
 	t.update(1)
 	label = 'timestep {0}'.format(i)
-	ele = new_paths[i]
+	ele = new_new_paths[i]
 	x1 = np.real(ele.start)
 	y1 = np.imag(ele.start)
 	x2 = np.real(ele.end)
@@ -109,7 +187,7 @@ def update(i):
 
 
 
-anim = FuncAnimation(fig, update, frames=np.arange(0, len(new_paths)), interval=1)
+anim = FuncAnimation(fig, update, frames=np.arange(0, len(new_new_paths)), interval=1)
 plt.show()
 # print('saving animation')
 # anim.save('line.gif', dpi=80, writer='imagemagick')
