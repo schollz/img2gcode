@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 import matplotlib.colors as mcolors
 from matplotlib.animation import FuncAnimation
-from svgpathtools import svg2paths2, wsvg, Line
+from svgpathtools import svg2paths2, wsvg, Line, Path
 import numpy as np
 from tqdm import tqdm
 from simplification.cutil import (
@@ -63,7 +63,6 @@ def cubic_bezier_sample(start, control1, control2, end):
 
 paths, attributes, svg_attributes = svg2paths2('out.svg')
 print("have {} paths".format(len(paths)))
-
 
 new_paths = []
 for i,path in tqdm(enumerate(paths)):
@@ -151,13 +150,15 @@ for i,segment in enumerate(segments):
 			coords.append([x1,y1])
 		coords.append([x2,y2])
 	total_points_original += len(coords)
-	simplified = fuse(coords,1)
-	simplified = simplify_coords(coords, 1.0)
+	simplified = fuse(coords,3)
+	simplified = simplify_coords(coords, 5.0)
 	total_points_new += len(simplified)
+	paths = Path()
 	for j,coord in enumerate(simplified):
 		if j==0:
 			continue
-		new_new_paths.append(Line(complex(simplified[j-1][0],simplified[j-1][1]),complex(simplified[j][0],simplified[j][1])))
+		paths.append(Line(complex(simplified[j-1][0],simplified[j-1][1]),complex(simplified[j][0],simplified[j][1])))
+	new_new_paths.append(paths)
 
 print("had {} points ".format(total_points_original))
 print("now have {} points".format(total_points_new))
