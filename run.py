@@ -189,7 +189,7 @@ print("wrote image to output2.svg")
 print(bounds)
 
 fig, ax = plt.subplots()
-fig.set_tight_layout(True)
+ax.set_aspect(aspect=1)
 plt.axis(bounds)
 
 print('fig size: {0} DPI, size in inches {1}'.format(
