@@ -72,7 +72,7 @@ for i,path in tqdm(enumerate(paths)):
 		x2 = np.real(ele.end)
 		y2 = np.imag(ele.end)
 		if 'CubicBezier' in str(ele):
-			n_segments = 6
+			n_segments = 8
 			# get curve segment generator
 			curve = cubic_bezier_sample(ele.start, ele.control1, ele.control2,ele.end)
 			# get points on curve
