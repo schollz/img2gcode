@@ -25,12 +25,12 @@ from simplification.cutil import (
 from loguru import logger as log
 import click
 
+import hashlib
+import ntpath
+import os
+import subprocess
 import sys
-
-#               minX maxX  minY maxY
-DRAWING_AREA = [650, 1775, -1000, 1000]
-DIMENSIONS = [1125, 2000]
-
+from shutil import copyfile
 
 def dist2(p1, p2):
     return (p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2
@@ -82,7 +82,7 @@ def cubic_bezier_sample(start, control1, control2, end):
     return lambda t: np.array([t ** 3, t ** 2, t, 1]).dot(partial)
 
 
-def processSVG(fnamein, fnameout):
+def processSVG(fnamein, fnameout,drawing_area=[650, 1775, -1000, 1000]):
     paths, attributes, svg_attributes = svg2paths2(fnamein)
     log.info("have {} paths", len(paths))
 
@@ -140,21 +140,21 @@ def processSVG(fnamein, fnameout):
     segment = []
     for i, ele in enumerate(new_paths):
         x1 = (np.real(ele.start) - bounds[0]) / (bounds[1] - bounds[0]) * (
-            DRAWING_AREA[1] - DRAWING_AREA[0]
-        ) + DRAWING_AREA[0]
+            drawing_area[1] - drawing_area[0]
+        ) + drawing_area[0]
         y1 = (np.imag(ele.start) - bounds[2]) / (bounds[3] - bounds[2]) * (
-            DRAWING_AREA[3] - DRAWING_AREA[2]
-        ) + DRAWING_AREA[2]
+            drawing_area[3] - drawing_area[2]
+        ) + drawing_area[2]
         x2 = (np.real(ele.end) - bounds[0]) / (bounds[1] - bounds[0]) * (
-            DRAWING_AREA[1] - DRAWING_AREA[0]
-        ) + DRAWING_AREA[0]
+            drawing_area[1] - drawing_area[0]
+        ) + drawing_area[0]
         y2 = (np.imag(ele.end) - bounds[2]) / (bounds[3] - bounds[2]) * (
-            DRAWING_AREA[3] - DRAWING_AREA[2]
-        ) + DRAWING_AREA[2]
-        x1 = round(x1, 1)
-        y1 = round(y1, 1)
-        x2 = round(x2, 1)
-        y2 = round(y2, 1)
+            drawing_area[3] - drawing_area[2]
+        ) + drawing_area[2]
+        x1 = round(x1)
+        y1 = round(y1)
+        x2 = round(x2)
+        y2 = round(y2)
 
         d = dist2([x1, y1], [x2, y2])
         if (
@@ -173,7 +173,7 @@ def processSVG(fnamein, fnameout):
         last_point = [x2, y2]
     segments.append(segment)
 
-    bounds = DRAWING_AREA
+    bounds = drawing_area
 
     log.debug("have {} segments".format(len(segments)))
     log.debug("first segment has {} lines".format(len(segments[0])))
@@ -264,7 +264,7 @@ def animateProcess(new_new_paths_flat, bounds, fname=""):
         if x1 != last_point[0] and y1 != last_point[1]:
             segmenti = segmenti + 1
         d = dist2([x1, y1], [x2, y2])
-        plt.plot([x1, x2], [y1, y2], "-", color=colors[segmenti % len(colors)])
+        plt.plot([x1, x2], [y1, y2], "-", color=colors[segmenti % len(colors)],linewidth=0.4)
         last_point = [x2, y2]
         return
 
@@ -272,22 +272,64 @@ def animateProcess(new_new_paths_flat, bounds, fname=""):
         fig, update, frames=len(new_new_paths_flat), interval=50, repeat=False
     )
     if fname != "":
-        print("saving animation")
+        log.debug("saving animation")
         anim.save(fname, dpi=300, writer="ffmpeg")
-        print("wrote draw pattern to line.gif")
     else:
         plt.show()
 
 
 @click.command()
-@click.option("--svgin", prompt="svg in?", help="svg to process")
-@click.option("--svgout", prompt="svg out?", help="svg to output")
-@click.option("--animate", default="", help="animate to file")
-def run(svgin, svgout, animate):
-    log.info("running")
-    new_new_paths_flat, bounds = processSVG(svgin, svgout)
-    log.debug("animate to file: {}", animate)
-    animateProcess(new_new_paths_flat, bounds, animate)
+@click.option("--file", prompt="image in?", help="svg to process")
+@click.option('--animate/--no-animate', default=False)
+@click.option("--minx", default=650, help="minimum x")
+@click.option("--maxx", default=1775, help="maximum x")
+@click.option("--miny", default=-1000, help="minimum y")
+@click.option("--maxy", default=1000, help="maximum y")
+def run(file, animate,minx,maxx,miny,maxy):
+    imconvert = "convert"
+    if os.name=='nt':
+        imconvert = "imconvert"
+
+    foldername = ntpath.basename(file)+".drawbot"
+    try:
+        os.mkdir(foldername)
+    except:
+        pass
+
+    copyfile(file,os.path.join(foldername,ntpath.basename(file)))
+ 
+    log.info(f"working in {foldername}")
+    os.chdir(foldername)
+    file = ntpath.basename(file)
+
+    width = maxy-miny
+    height = maxx-minx
+    cmd = f"{imconvert} {file} -resize {width}x{height} -background White -gravity center -extent {width}x{height} -threshold 60%% out.png"
+    log.debug(cmd)
+    subprocess.run(cmd.split())
+
+    cmd = f"{imconvert} out.png -negate -morphology Thinning:-1 Skeleton out2.png"
+    log.debug(cmd)
+    subprocess.run(cmd.split())
+
+    cmd = f"{imconvert} out2.png -negate out3.png"
+    log.debug(cmd)
+    subprocess.run(cmd.split())
+
+    cmd = f"{imconvert} out3.png -shave 1x1 -bordercolor black -border 1 -rotate 90 out4.bmp"
+    log.debug(cmd)
+    subprocess.run(cmd.split())
+
+    cmd = f"potrace -b svg -o preprocessed.svg out4.bmp"
+    log.debug(cmd)
+    subprocess.run(cmd.split())
+
+    new_new_paths_flat, bounds = processSVG("preprocessed.svg", "processed.svg")
+    animatefile = ""
+    if animate:
+        animatefile = "movie.mp4"
+    animateProcess(new_new_paths_flat, bounds, animatefile)
+
 
 
 if __name__ == "__main__":
