@@ -310,12 +310,13 @@ def animateProcess(new_new_paths_flat, bounds, fname=""):
 @click.option("--maxx", default=1775, help="maximum x")
 @click.option("--miny", default=-1000, help="minimum y")
 @click.option("--maxy", default=1000, help="maximum y")
-def run(file, animate, minx, maxx, miny, maxy):
+@click.option("--threshold", default=60, help="percent threshold (0-100)")
+def run(file, animate, minx, maxx, miny, maxy, threshold):
     imconvert = "convert"
     if os.name == "nt":
         imconvert = "imconvert"
 
-    foldername = ntpath.basename(file) + ".drawbot"
+    foldername = ntpath.basename(file) + ".img2gcode"
     try:
         os.mkdir(foldername)
     except:
@@ -329,31 +330,31 @@ def run(file, animate, minx, maxx, miny, maxy):
 
     width = maxy - miny
     height = maxx - minx
-    cmd = f"{imconvert} {file} -resize {width}x{height} -background White -gravity center -extent {width}x{height} -threshold 60%% out.png"
+    cmd = f"{imconvert} {file} -resize {width}x{height} -background White -gravity center -extent {width}x{height} -threshold {threshold}%% thresholded.png"
     log.debug(cmd)
     subprocess.run(cmd.split())
 
-    cmd = f"{imconvert} out.png -negate -morphology Thinning:-1 Skeleton out2.png"
+    cmd = f"{imconvert} thresholded.png -negate -morphology Thinning:-1 Skeleton skeleton.png"
     log.debug(cmd)
     subprocess.run(cmd.split())
 
-    cmd = f"{imconvert} out2.png -negate out3.png"
+    cmd = f"{imconvert} skeleton.png -negate skeleton_negate.png"
     log.debug(cmd)
     subprocess.run(cmd.split())
 
-    cmd = f"{imconvert} out3.png -shave 1x1 -bordercolor black -border 1 -rotate 90 out4.bmp"
+    cmd = f"{imconvert} skeleton_negate.png -shave 1x1 -bordercolor black -border 1 -rotate 90 skeleton_border.bmp"
     log.debug(cmd)
     subprocess.run(cmd.split())
 
-    cmd = f"potrace -b svg -o preprocessed.svg out4.bmp"
+    cmd = f"potrace -b svg -o potrace.svg skeleton_border.bmp"
     log.debug(cmd)
     subprocess.run(cmd.split())
 
-    new_new_paths_flat, bounds = processSVG("preprocessed.svg", "processed.svg")
+    new_new_paths_flat, bounds = processSVG("potrace.svg", "final.svg")
     animatefile = ""
     if animate:
-        animatefile = "movie.mp4"
-    # animateProcess(new_new_paths_flat, bounds, animatefile)
+        animatefile = "animation.mp4"
+        animateProcess(new_new_paths_flat, bounds, animatefile)
 
 
 if __name__ == "__main__":
