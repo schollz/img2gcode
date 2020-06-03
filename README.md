@@ -1,7 +1,37 @@
 # svg2gcode
-svg to gcode
 
 
-	convert 1.jpg -resize 2000x1125 -background White -gravity center -extent 2000x1125 -threshold 60% out.bmp
 
-	convert out3.bmp -shave 1x1 -bordercolor black -border 1 out4.bmp
+## Install
+
+You need the following requirements:
+
+- python (3.6+)
+- potrace
+- ffmpeg
+- imagemagick
+
+On Windows you can install with scoop:
+
+	scoop install potrace ffmpeg imagemagick python3
+
+On Linux you can install with apt:
+	
+	sudo apt install potrace ffmpeg imagemagick python3
+
+Once installed,  you can install the required Python packages with pip:
+
+	python3 -m pip install -r requirements.txt
+
+## Run
+
+
+## Notes
+
+The determined ares are from [Line-us Drawing Area](https://github.com/Line-us/Line-us-Programming/blob/master/Documentation/LineUsDrawingArea.pdf).
+
+
+
+## License
+
+MIT
