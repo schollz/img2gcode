@@ -6,7 +6,7 @@ Turn this:
 <img src=".github/sun.jpg" height=300>
 </p>
 
-directly into lines to be plotted by Line-us:
+directly into lines to be plotted by Line-us (note that here the x and y coordinates are rotated):
 
 ![](.github/output.gif)
 
