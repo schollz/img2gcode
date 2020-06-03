@@ -1,0 +1,60 @@
+<html>
+
+<head>
+</head>
+
+<body>
+    <object type="image/svg+xml" id="SVG" />
+    <script>
+    var svgDoc;
+    var segments = [];
+    document.getElementById("SVG").data = "/output2.svg";
+    document.getElementById("SVG").onload = function(e) {
+        svgDoc = document.getElementById("SVG").contentDocument;
+        var num_paths = 0;
+        var num_segments = 0;
+        for (var i = 0; i < svgDoc.childNodes[0].childNodes.length; i++) {
+            if (svgDoc.childNodes[0].childNodes[i].animatedPathSegList == undefined) {
+                continue
+            }
+            paths = svgDoc.childNodes[0].childNodes[i].animatedPathSegList;
+            var segment = [];
+            for (var j = 0; j < paths.length; j++) {
+                segment.push(paths[j]);
+                num_paths += 1;
+            }
+            segments.push(segment);
+            num_segments += 1
+        }
+        console.log(`loaded ${num_segments} segments with total of ${num_paths} paths`);
+    };
+
+    var socket;
+    const socketMessageListener = (e) => {
+        console.log(e.data);
+    };
+    const socketOpenListener = (e) => {
+        console.log('connected to line-us');
+        socket.send("M114"); // send Get Position message
+    };
+    const socketErrorListener = (e) => {
+        console.error(e);
+    }
+    const socketCloseListener = (e) => {
+        if (socket) {
+            console.log('disconnected!');
+        }
+        var url = "ws://line-us.local";
+        socket = new WebSocket(url);
+        socket.onopen = socketOpenListener;
+        socket.onmessage = socketMessageListener;
+        socket.onclose = socketCloseListener;
+        socket.onerror = socketErrorListener;
+    };
+    window.addEventListener('load', (event) => {
+        socketCloseListener();
+    });
+    </script>
+</body>
+
+</html>
