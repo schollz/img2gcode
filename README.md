@@ -2,7 +2,7 @@
 
 Turn this:
 
-![sun](.github/sun.jpg)
+<img src=".github/sun.jpg" height=300>
 
 directly into lines to be plotted by Line-us:
 
