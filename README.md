@@ -2,7 +2,9 @@
 
 Turn this:
 
+<p align="center">
 <img src=".github/sun.jpg" height=300>
+</p>
 
 directly into lines to be plotted by Line-us:
 
