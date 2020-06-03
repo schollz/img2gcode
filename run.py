@@ -32,6 +32,7 @@ import subprocess
 import sys
 from shutil import copyfile
 
+
 def dist2(p1, p2):
     return (p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2
 
@@ -82,7 +83,7 @@ def cubic_bezier_sample(start, control1, control2, end):
     return lambda t: np.array([t ** 3, t ** 2, t, 1]).dot(partial)
 
 
-def processSVG(fnamein, fnameout,drawing_area=[650, 1775, -1000, 1000]):
+def processSVG(fnamein, fnameout, drawing_area=[650, 1775, -1000, 1000]):
     paths, attributes, svg_attributes = svg2paths2(fnamein)
     log.info("have {} paths", len(paths))
 
@@ -224,6 +225,28 @@ def processSVG(fnamein, fnameout,drawing_area=[650, 1775, -1000, 1000]):
     log.debug("wrote image to {}", fnameout)
 
     log.info(bounds)
+
+    gcodestring = "G01 Z1000 "
+    for i, segment in enumerate(segments):
+        coords = []
+        if len(segment) < 2:
+            continue
+        for j, ele in enumerate(segment):
+            x1 = np.real(ele.start)
+            y1 = np.imag(ele.start)
+            x2 = np.real(ele.end)
+            y2 = np.imag(ele.end)
+            if j == 0:
+                gcodestring += f"G01 X{int(x1)} Y{int(y1)} Z1000 "
+                gcodestring += f"G01 Z0 "
+            else:
+                gcodestring += f"G01 X{int(x1)} Y{int(y1)} Z0 "    
+
+        gcodestring += "G01 Z1000 "
+
+    with open("image.gc","w")as f:
+        f.write(gcodestring.strip())
+
     return new_new_paths_flat, bounds
 
 
@@ -264,7 +287,9 @@ def animateProcess(new_new_paths_flat, bounds, fname=""):
         if x1 != last_point[0] and y1 != last_point[1]:
             segmenti = segmenti + 1
         d = dist2([x1, y1], [x2, y2])
-        plt.plot([x1, x2], [y1, y2], "-", color=colors[segmenti % len(colors)],linewidth=0.4)
+        plt.plot(
+            [x1, x2], [y1, y2], "-", color=colors[segmenti % len(colors)], linewidth=0.4
+        )
         last_point = [x2, y2]
         return
 
@@ -280,30 +305,30 @@ def animateProcess(new_new_paths_flat, bounds, fname=""):
 
 @click.command()
 @click.option("--file", prompt="image in?", help="svg to process")
-@click.option('--animate/--no-animate', default=False)
+@click.option("--animate/--no-animate", default=False)
 @click.option("--minx", default=650, help="minimum x")
 @click.option("--maxx", default=1775, help="maximum x")
 @click.option("--miny", default=-1000, help="minimum y")
 @click.option("--maxy", default=1000, help="maximum y")
-def run(file, animate,minx,maxx,miny,maxy):
+def run(file, animate, minx, maxx, miny, maxy):
     imconvert = "convert"
-    if os.name=='nt':
+    if os.name == "nt":
         imconvert = "imconvert"
 
-    foldername = ntpath.basename(file)+".drawbot"
+    foldername = ntpath.basename(file) + ".drawbot"
     try:
         os.mkdir(foldername)
     except:
         pass
 
-    copyfile(file,os.path.join(foldername,ntpath.basename(file)))
- 
+    copyfile(file, os.path.join(foldername, ntpath.basename(file)))
+
     log.info(f"working in {foldername}")
     os.chdir(foldername)
     file = ntpath.basename(file)
 
-    width = maxy-miny
-    height = maxx-minx
+    width = maxy - miny
+    height = maxx - minx
     cmd = f"{imconvert} {file} -resize {width}x{height} -background White -gravity center -extent {width}x{height} -threshold 60%% out.png"
     log.debug(cmd)
     subprocess.run(cmd.split())
@@ -328,8 +353,7 @@ def run(file, animate,minx,maxx,miny,maxy):
     animatefile = ""
     if animate:
         animatefile = "movie.mp4"
-    animateProcess(new_new_paths_flat, bounds, animatefile)
-
+    # animateProcess(new_new_paths_flat, bounds, animatefile)
 
 
 if __name__ == "__main__":
