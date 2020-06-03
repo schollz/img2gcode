@@ -8,3 +8,11 @@ generate:
 	potrace -b svg -o out.svg out4.bmp
 	python3 run.py --svgin out.svg --svgout output2.svg --animate 1.mp4
 	ffmpeg -i 1.mp4 -vf "transpose=2" -y 2.mp4
+
+gifit:
+	ffmpeg -i 2.mp4 -vf "fps=10,scale=800:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -loop 1 -y output.gif
+	ffmpeg -i output.gif -y 4.mp4
+	ffmpeg -i 4.mp4 -filter:v "crop=800:500:0:300" -y 5.mp4
+	ffmpeg -i 5.mp4 -vf "fps=10,scale=800:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -loop 1 -y output2.gif
+	rm 4.mp4 5.mp4
+
