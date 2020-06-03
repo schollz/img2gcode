@@ -1,6 +1,12 @@
 # svg2gcode
 
+Turn this:
 
+![sun](.github/sun.jpg)
+
+directly into lines to be plotted by Line-us:
+
+![](.github/output.gif)
 
 ## Install
 
