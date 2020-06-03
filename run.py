@@ -9,6 +9,9 @@
 
 # print(path_string)
 import matplotlib.pyplot as plt
+
+# import matplotlib
+# matplotlib.use("Agg")
 import matplotlib.lines as mlines
 import matplotlib.colors as mcolors
 from matplotlib.animation import FuncAnimation
@@ -24,6 +27,10 @@ from simplification.cutil import (
 )
 
 import sys
+
+#               minX maxX  minY maxY
+DRAWING_AREA = [650,1775,-1000,1000]
+DIMENSIONS = [1125, 2000]
 
 def dist2(p1, p2):
     return (p1[0]-p2[0])**2 + (p1[1]-p2[1])**2
@@ -61,7 +68,6 @@ def fuse_linear(points,d):
 		if not has_close_point:
 			ret.append(p1)
 	return ret 
-
 
 
 def cubic_bezier_sample(start, control1, control2, end):
@@ -136,18 +142,28 @@ last_point = [0,0]
 segments = []
 segment = []
 for i, ele in enumerate(new_paths):
-	x1 = round((np.real(ele.start) - bounds[0]) / (bounds[1]-bounds[0]) * 2000.0,1)
-	y1 = round((np.imag(ele.start) - bounds[2]) / (bounds[3]-bounds[2]) * 2000.0,1)
-	x2 = round((np.real(ele.end) - bounds[0]) / (bounds[1]-bounds[0]) * 2000.0,1)
-	y2 = round((np.imag(ele.end) - bounds[2]) / (bounds[3]-bounds[2]) * 2000.0,1)
+	x1 = (np.real(ele.start) - bounds[0]) / (bounds[1]-bounds[0]) * (DRAWING_AREA[1]-DRAWING_AREA[0])+DRAWING_AREA[0]
+	y1 = (np.imag(ele.start) - bounds[2]) / (bounds[3]-bounds[2]) * (DRAWING_AREA[3]-DRAWING_AREA[2])+DRAWING_AREA[2]
+	x2 = (np.real(ele.end) - bounds[0]) / (bounds[1]-bounds[0]) * (DRAWING_AREA[1]-DRAWING_AREA[0])+DRAWING_AREA[0]
+	y2 = (np.imag(ele.end) - bounds[2]) / (bounds[3]-bounds[2]) * (DRAWING_AREA[3]-DRAWING_AREA[2])+DRAWING_AREA[2]
+	x1 = round(x1,1)
+	y1 = round(y1,1)
+	x2 = round(x2,1)
+	y2 = round(y2,1)
+
+	d = dist2([x1,y1],[x2,y2])
 	if x1 != last_point[0] and y1 != last_point[1] and last_point[0] !=0 and last_point[1] !=0:
 		segments.append(segment)
 		segment = []
+	elif d > 100000: # this is to prevent the border
+		segments.append(segment)
+		segment = []
+		continue			
 	segment.append(Line(complex(x1,y1),complex(x2,y2)))
 	last_point = [x2,y2]
 segments.append(segment)
 
-bounds = [0,2000,0,2000]
+bounds = DRAWING_AREA
 
 print("have {} segments".format(len(segments)))
 print("first segment has {} lines".format(len(segments[0])))
@@ -167,7 +183,7 @@ for i,segment in enumerate(segments):
 		coords.append([x2,y2])
 	total_points_original += len(coords)
 	simplified = coords
-	# simplified = fuse_linear(simplified,15)
+	# simplified = fuse_linear(simplified,30)
 	simplified = simplify_coords(simplified, 5.0)
 	if len(simplified) < 2:
 		continue
@@ -178,7 +194,8 @@ for i,segment in enumerate(segments):
 			continue
 		paths.append(Line(complex(simplified[j-1][0],simplified[j-1][1]),complex(simplified[j][0],simplified[j][1])))
 		new_new_paths_flat.append(Line(complex(simplified[j-1][0],simplified[j-1][1]),complex(simplified[j][0],simplified[j][1])))
-	new_new_paths.append(paths)
+	if i > -1:
+		new_new_paths.append(paths)
 
 print("had {} points ".format(total_points_original))
 print("now have {} points".format(total_points_new))
@@ -202,6 +219,8 @@ segmenti = 0
 colors = list(mcolors.TABLEAU_COLORS)
 
 def update(i):
+	if i > len(new_new_paths_flat):
+		return
 	global last_point, segmenti
 	t.update(1)
 	label = 'timestep {0}'.format(i)
@@ -211,20 +230,20 @@ def update(i):
 	x2 = np.real(ele.end)
 	y2 = np.imag(ele.end)
 	if x1 != last_point[0] and y1 != last_point[1]:
-		print("moved!")
 		segmenti = segmenti + 1
+	d = dist2([x1,y1],[x2,y2])
 	plt.plot([x1,x2],[y1,y2],'-',color=colors[segmenti % len(colors)])
 	last_point = [x2,y2]
 	return
 
 
 
-anim = FuncAnimation(fig, update, frames=np.arange(0, len(new_new_paths_flat)), interval=1)
+anim = FuncAnimation(fig, update, frames=len(new_new_paths_flat), interval=50, repeat=False)
 plt.show()
-
-
 # print('saving animation')
-# anim.save('line.gif', dpi=80, writer='imagemagick')
+# anim.save('line.mp4', dpi=300, writer='ffmpeg')
 # print("wrote draw pattern to line.gif")
+
+
 
 
