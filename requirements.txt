@@ -1,8 +1,0 @@
-click
-loguru
-matplotlib
-numpy
-simplification
-svgpathtools
-svgwrite
-tqdm
