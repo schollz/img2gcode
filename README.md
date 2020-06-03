@@ -1,14 +1,12 @@
-# drawbot
+# img2gcode.py
 
-drawbot is a python script that utilizes common tools to turn a drawing (scanned or from a tablet) into a svg line drawing whose coordinates are compatabile with the drawing area of a drawing robot arm.
-
-Basically, you can take a drawing, like this:
+This script, `img2gcode.py` will take any image and convert it into a nice line drawing with GCode coordinates. You can take a scanned drawing, or black and white digital sketch like below and convert it into lines to be plotted.
 
 <p align="center">
 <img src=".github/sun.jpg" height=300>
 </p>
 
-And directly convert it into lines that can be plotted (the dimensions for this are for the [Line-us drawing arm](https://github.com/Line-us/Line-us-Programming/blob/master/Documentation/LineUsDrawingArea.pdf)):
+You can specify the dimensions of the underlying plotter. For the example below, generated from the iamge above, the dimensions for [the Line-us drawing arm](https://github.com/Line-us/Line-us-Programming/blob/master/Documentation/LineUsDrawingArea.pdf)).
 
 ![](.github/output.gif)
 
