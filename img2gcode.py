@@ -83,7 +83,7 @@ def cubic_bezier_sample(start, control1, control2, end):
     return lambda t: np.array([t ** 3, t ** 2, t, 1]).dot(partial)
 
 
-def processSVG(fnamein, fnameout, drawing_area=[650, 1775, -1000, 1000]):
+def processSVG(fnamein, fnameout, simplifylevel=5, drawing_area=[650, 1775, -1000, 1000]):
     paths, attributes, svg_attributes = svg2paths2(fnamein)
     log.info("have {} paths", len(paths))
 
@@ -212,7 +212,7 @@ def processSVG(fnamein, fnameout, drawing_area=[650, 1775, -1000, 1000]):
 
         simplified = coords2
         # simplified = fuse_linear(simplified,30)
-        simplified = simplify_coords(simplified,5.0)
+        simplified = simplify_coords(simplified,simplifylevel)
         if len(simplified) < 2:
             continue
         total_points_new += len(simplified)
@@ -325,12 +325,15 @@ def animateProcess(new_new_paths_flat, bounds, fname=""):
 @click.option("--file", prompt="image in?", help="svg to process")
 @click.option("--folder",default=".", help="folder to output into")
 @click.option("--animate/--no-animate", default=False)
+@click.option("--overwrite/--no-overwrite", default=True)
 @click.option("--minx", default=650, help="minimum x")
 @click.option("--maxx", default=1775, help="maximum x")
 @click.option("--miny", default=-1000, help="minimum y")
 @click.option("--maxy", default=1000, help="maximum y")
+@click.option("--maxy", default=1000, help="maximum y")
+@click.option("--simplify", default=5, help="simplify level")
 @click.option("--threshold", default=60, help="percent threshold (0-100)")
-def run(folder, file, animate, minx, maxx, miny, maxy, threshold):
+def run(folder, file, simplify, overwrite, animate, minx, maxx, miny, maxy, threshold):
     imconvert = "convert"
     if os.name == "nt":
         imconvert = "imconvert"
@@ -355,27 +358,28 @@ def run(folder, file, animate, minx, maxx, miny, maxy, threshold):
 
     width = maxy - miny
     height = maxx - minx
-    # cmd = f"{imconvert} {file} -resize {width}x{height} -background White -gravity center -extent {width}x{height} -threshold {threshold}%% thresholded.png"
-    # log.debug(cmd)
-    # subprocess.run(cmd.split())
+    if not os.path.exists("potrace.svg") or overwrite:
+        cmd = f"{imconvert} {file} -resize {width}x{height} -background White -gravity center -extent {width}x{height} -threshold {threshold}%% thresholded.png"
+        log.debug(cmd)
+        subprocess.run(cmd.split())
 
-    # cmd = f"{imconvert} thresholded.png -negate -morphology Thinning:-1 Skeleton skeleton.png"
-    # log.debug(cmd)
-    # subprocess.run(cmd.split())
+        cmd = f"{imconvert} thresholded.png -negate -morphology Thinning:-1 Skeleton skeleton.png"
+        log.debug(cmd)
+        subprocess.run(cmd.split())
 
-    # cmd = f"{imconvert} skeleton.png -negate skeleton_negate.png"
-    # log.debug(cmd)
-    # subprocess.run(cmd.split())
+        cmd = f"{imconvert} skeleton.png -negate skeleton_negate.png"
+        log.debug(cmd)
+        subprocess.run(cmd.split())
 
-    # cmd = f"{imconvert} skeleton_negate.png -shave 1x1 -bordercolor black -border 1 -rotate 90 skeleton_border.bmp"
-    # log.debug(cmd)
-    # subprocess.run(cmd.split())
+        cmd = f"{imconvert} skeleton_negate.png -shave 1x1 -bordercolor black -border 1 -rotate 90 skeleton_border.bmp"
+        log.debug(cmd)
+        subprocess.run(cmd.split())
 
-    # cmd = f"potrace -b svg -o potrace.svg skeleton_border.bmp"
-    # log.debug(cmd)
-    # subprocess.run(cmd.split())
+        cmd = f"potrace -b svg -o potrace.svg skeleton_border.bmp"
+        log.debug(cmd)
+        subprocess.run(cmd.split())
 
-    new_new_paths_flat, bounds = processSVG("potrace.svg", "final.svg")
+    new_new_paths_flat, bounds = processSVG("potrace.svg", "final.svg",simplifylevel=simplify,drawing_area = [minx,maxx,miny,maxy])
     animatefile = ""
     if animate:
         animatefile = "animation.mp4"
