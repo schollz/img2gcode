@@ -250,6 +250,9 @@ def animateProcess(new_new_paths_flat, bounds, fname="out.gif"):
     print(bounds)
     im = Image.new('RGB', (bounds[1]-bounds[0], bounds[3]-bounds[2]), color_2)
     last_point = [0,0]
+    gifmod = 4
+    if len(new_new_paths_flat) > 50:
+        gifmod = int(len(new_new_paths_flat)/50)
     for i,ele in enumerate(new_new_paths_flat):
         x1 = np.real(ele.start)-bounds[0]
         y1 = np.imag(ele.start)-bounds[2]
@@ -259,7 +262,7 @@ def animateProcess(new_new_paths_flat, bounds, fname="out.gif"):
             pass # change color
         draw = ImageDraw.Draw(im)
         draw.line((x1,y1,x2,y2), fill=color_1,width=6)
-        if i%4 == 0:
+        if i%gifmod == 0:
             im0 = im.copy()
             images.append(im0)
         last_point = [x2, y2]
