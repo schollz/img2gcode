@@ -88,15 +88,39 @@ def processSVG(fnamein, fnameout, simplifylevel=5, pruneLittle=7, drawing_area=[
     log.info("have {} paths", len(paths))
 
     log.debug("converting beziers to lines")
+
     new_paths = []
-    for i, path in enumerate(paths):
-        for j, ele in enumerate(path):
+    bounds = [1000000, -100000, 100000, -1000000]
+    for ii, path in enumerate(paths):
+        new_path = []
+
+        for jj, ele in enumerate(path):
+            if jj > len(path)/2:
+                ## TODO ONLY DO THIS IF THE START AND END POINTS ARE CLOSE!
+                continue
             x1 = np.real(ele.start)
             y1 = np.imag(ele.start)
             x2 = np.real(ele.end)
             y2 = np.imag(ele.end)
+            if ii == 0:
+                if x1 < bounds[0]:
+                    bounds[0] = x1
+                if x2 < bounds[0]:
+                    bounds[0] = x2
+                if x1 > bounds[1]:
+                    bounds[1] = x1
+                if x2 > bounds[1]:
+                    bounds[1] = x2
+                if y1 < bounds[2]:
+                    bounds[2] = y1
+                if y2 < bounds[2]:
+                    bounds[2] = y2
+                if y1 > bounds[3]:
+                    bounds[3] = y1
+                if y2 > bounds[3]:
+                    bounds[3] = y2
             if "CubicBezier" in str(ele):
-                n_segments = 8
+                n_segments = 2
                 # get curve segment generator
                 curve = cubic_bezier_sample(
                     ele.start, ele.control1, ele.control2, ele.end
@@ -106,171 +130,155 @@ def processSVG(fnamein, fnameout, simplifylevel=5, pruneLittle=7, drawing_area=[
                 for k, _ in enumerate(points):
                     if k == 0:
                         continue
-                    new_paths.append(Line(points[k - 1], points[k]))
+                    new_path.append(Line(complex(np.real(points[k - 1]),np.imag(points[k-1])),complex(np.real(points[k ]),np.imag(points[k]))))
             else:
-                new_paths.append(Line(ele.start, ele.end))
+                new_path.append(Line(ele.start, ele.end))
+        new_paths.append(new_path)
 
-    # deterine bounds
-    bounds = [1000000, -100000, 100000, -1000000]
-    for i, ele in enumerate(new_paths):
-        x1 = np.real(ele.start)
-        y1 = np.imag(ele.start)
-        x2 = np.real(ele.end)
-        y2 = np.imag(ele.end)
-        if x1 < bounds[0]:
-            bounds[0] = x1
-        if x2 < bounds[0]:
-            bounds[0] = x2
-        if x1 > bounds[1]:
-            bounds[1] = x1
-        if x2 > bounds[1]:
-            bounds[1] = x2
-        if y1 < bounds[2]:
-            bounds[2] = y1
-        if y2 < bounds[2]:
-            bounds[2] = y2
-        if y1 > bounds[3]:
-            bounds[3] = y1
-        if y2 > bounds[3]:
-            bounds[3] = y2
 
-    # transform points
+    #transform points
     print(bounds)
+    bounds = [0.0, 11250.0, 0.0, 20000.0]
     last_point = [0, 0]
     segments = []
     segment = []
-    for i, ele in enumerate(new_paths):
-        x1 = (np.real(ele.start) - bounds[0]) / (bounds[1] - bounds[0]) * (
-            drawing_area[1] - drawing_area[0]
-        ) + drawing_area[0]
-        y1 = (np.imag(ele.start) - bounds[2]) / (bounds[3] - bounds[2]) * (
-            drawing_area[3] - drawing_area[2]
-        ) + drawing_area[2]
-        x2 = (np.real(ele.end) - bounds[0]) / (bounds[1] - bounds[0]) * (
-            drawing_area[1] - drawing_area[0]
-        ) + drawing_area[0]
-        y2 = (np.imag(ele.end) - bounds[2]) / (bounds[3] - bounds[2]) * (
-            drawing_area[3] - drawing_area[2]
-        ) + drawing_area[2]
-        x1 = round(x1)
-        y1 = round(y1)
-        x2 = round(x2)
-        y2 = round(y2)
+    new_paths_flat = []
+    new_new_paths = []
+    for j, path in enumerate(new_paths):
+        coords = []
+        for i, ele in enumerate(path):
+            x1 = (np.real(ele.start) - bounds[0]) / (bounds[1] - bounds[0]) * (
+                drawing_area[1] - drawing_area[0]
+            ) + drawing_area[0]
+            y1 = (np.imag(ele.start) - bounds[2]) / (bounds[3] - bounds[2]) * (
+                drawing_area[3] - drawing_area[2]
+            ) + drawing_area[2]
+            x2 = (np.real(ele.end) - bounds[0]) / (bounds[1] - bounds[0]) * (
+                drawing_area[1] - drawing_area[0]
+            ) + drawing_area[0]
+            y2 = (np.imag(ele.end) - bounds[2]) / (bounds[3] - bounds[2]) * (
+                drawing_area[3] - drawing_area[2]
+            ) + drawing_area[2]
+            x1 = round(x1)
+            y1 = round(y1)
+            x2 = round(x2)
+            y2 = round(y2)
+            coords.append([x1,y1])
+            coords.append([x2,y2])
 
-        d = dist2([x1, y1], [x2, y2])
-        # check the max segment
-        if (
-            x1 != last_point[0]
-            and y1 != last_point[1]
-            and last_point[0] != 0
-            and last_point[1] != 0
-        ) or d > ((drawing_area[1]-drawing_area[0])/2+(drawing_area[3]-drawing_area[2])/2)/32:
-            segments.append(segment)
-            segment = []
-        segment.append(Line(complex(x1, y1), complex(x2, y2)))
-        last_point = [x2, y2]
-    segments.append(segment)
+        simplified = simplify_coords(coords,10)
 
+        new_path = []
+        for i,coord in enumerate(simplified):
+            if i == 0:
+                continue
+            path = Line(complex(simplified[i-1][0],simplified[i-1][1]),complex(simplified[i][0],simplified[i][1]))
+            new_path.append(path)
+            new_paths_flat.append(path)
+            # new_paths[j][i] = Line(complex(x1,y1),complex(x2,y2))
+        new_new_paths.append(new_path)
+        print(new_path)
     bounds = drawing_area
 
-    log.debug("have {} segments".format(len(segments)))
-    log.debug("first segment has {} lines".format(len(segments[0])))
-    total_points_original = 0
-    total_points_new = 0
-    new_new_paths = []
-    new_new_paths_flat = []
-    for i, segment in enumerate(segments):
-        coords = []
-        for j, ele in enumerate(segment):
-            x1 = np.real(ele.start)
-            y1 = np.imag(ele.start)
-            x2 = np.real(ele.end)
-            y2 = np.imag(ele.end)
-            if j == 0:
-                coords.append([x1, y1])
-            coords.append([x2, y2])
-        total_points_original += len(coords)
+    # log.debug("have {} segments".format(len(segments)))
+    # log.debug("first segment has {} lines".format(len(segments[0])))
+    # total_points_original = 0
+    # total_points_new = 0
+    # new_new_paths = []
+    # new_new_paths_flat = []
+    # for i, segment in enumerate(segments):
+    #     coords = []
+    #     for j, ele in enumerate(segment):
+    #         x1 = np.real(ele.start)
+    #         y1 = np.imag(ele.start)
+    #         x2 = np.real(ele.end)
+    #         y2 = np.imag(ele.end)
+    #         if j == 0:
+    #             coords.append([x1, y1])
+    #         coords.append([x2, y2])
+    #     total_points_original += len(coords)
 
-        # prune coordinates that jump too far
-        coords2 = []
-        total_length = 0
-        for j, coord in enumerate(coords):
-            if j == 0:
-                coords2.append(coords[j])
-                continue
-            d = dist2(coords[j-1],coords[j])
-            total_length += d
-            if d > ((drawing_area[1]-drawing_area[0])/2+(drawing_area[3]-drawing_area[2])/2)/.1 and (abs(coords[j-1][0]-coords[j][0]) < 5 or abs(coords[j-1][1]-coords[j][1]) < 5):
-                break
-            coords2.append(coords[j])
+    #     # prune coordinates that jump too far
+    #     coords2 = []
+    #     total_length = 0
+    #     for j, coord in enumerate(coords):
+    #         if j == 0:
+    #             coords2.append(coords[j])
+    #             continue
+    #         d = dist2(coords[j-1],coords[j])
+    #         total_length += d
+    #         if d > ((drawing_area[1]-drawing_area[0])/2+(drawing_area[3]-drawing_area[2])/2)/.1 and (abs(coords[j-1][0]-coords[j][0]) < 5 or abs(coords[j-1][1]-coords[j][1]) < 5):
+    #             break
+    #         coords2.append(coords[j])
 
-        # prune lines that are really short
-        if total_length < ((drawing_area[1]-drawing_area[0])/2+(drawing_area[3]-drawing_area[2])/2)/pruneLittle:
-            continue
+    #     # prune lines that are really short
+    #     if total_length < ((drawing_area[1]-drawing_area[0])/2+(drawing_area[3]-drawing_area[2])/2)/pruneLittle:
+    #         continue
 
-        simplified = coords2
-        # simplified = fuse_linear(simplified,30)
-        simplified = simplify_coords(simplified,simplifylevel)
-        if len(simplified) < 2:
-            continue
-        total_points_new += len(simplified)
-        paths = Path()
-        for j, coord in enumerate(simplified):
-            if j == 0:
-                continue
-            paths.append(
-                Line(
-                    complex(simplified[j - 1][0], simplified[j - 1][1]),
-                    complex(simplified[j][0], simplified[j][1]),
-                )
-            )
-            new_new_paths_flat.append(
-                Line(
-                    complex(simplified[j - 1][0], simplified[j - 1][1]),
-                    complex(simplified[j][0], simplified[j][1]),
-                )
-            )
-        if i > -1 and len(paths)>1:
-            new_new_paths.append(paths)
+    #     simplified = coords2
+    #     # simplified = fuse_linear(simplified,30)
+    #     simplified = simplify_coords(simplified,simplifylevel)
+    #     if len(simplified) < 2:
+    #         continue
+    #     total_points_new += len(simplified)
+    #     paths = Path()
+    #     for j, coord in enumerate(simplified):
+    #         if j == 0:
+    #             continue
+    #         paths.append(
+    #             Line(
+    #                 complex(simplified[j - 1][0], simplified[j - 1][1]),
+    #                 complex(simplified[j][0], simplified[j][1]),
+    #             )
+    #         )
+    #         new_new_paths_flat.append(
+    #             Line(
+    #                 complex(simplified[j - 1][0], simplified[j - 1][1]),
+    #                 complex(simplified[j][0], simplified[j][1]),
+    #             )
+    #         )
+    #     if i > -1 and len(paths)>1:
+    #         new_new_paths.append(paths)
 
-    log.debug("had {} points ", total_points_original)
-    log.debug("now have {} points".format(total_points_new))
-    log.debug("now have {} lines".format(len(new_new_paths)))
-    wsvg(new_new_paths, filename=fnameout)
+    # log.debug("had {} points ", total_points_original)
+    # log.debug("now have {} points".format(total_points_new))
+    # log.debug("now have {} lines".format(len(new_new_paths)))
+    wsvg(new_paths_flat, filename=fnameout)
+    # TODO: encode your own svg, this thing doesn't work to break it apart
     log.debug("wrote image to {}", fnameout)
 
     log.info(bounds)
 
-    gcodestring = "G01 Z1000 "
-    for i, segment in enumerate(segments):
-        coords = []
-        if len(segment) < 2:
-            continue
-        for j, ele in enumerate(segment):
-            x1 = np.real(ele.start)
-            y1 = np.imag(ele.start)
-            x2 = np.real(ele.end)
-            y2 = np.imag(ele.end)
-            if j == 0:
-                gcodestring += f"G01 X{int(x1)} Y{int(y1)} Z1000 "
-                gcodestring += f"G01 Z0 "
-            else:
-                gcodestring += f"G01 X{int(x1)} Y{int(y1)} Z0 "    
+    # gcodestring = "G01 Z1000 "
+    # for i, segment in enumerate(segments):
+    #     coords = []
+    #     if len(segment) < 2:
+    #         continue
+    #     for j, ele in enumerate(segment):
+    #         x1 = np.real(ele.start)
+    #         y1 = np.imag(ele.start)
+    #         x2 = np.real(ele.end)
+    #         y2 = np.imag(ele.end)
+    #         if j == 0:
+    #             gcodestring += f"G01 X{int(x1)} Y{int(y1)} Z1000 "
+    #             gcodestring += f"G01 Z0 "
+    #         else:
+    #             gcodestring += f"G01 X{int(x1)} Y{int(y1)} Z0 "    
 
-        gcodestring += "G01 Z1000 "
+    #     gcodestring += "G01 Z1000 "
 
-    with open("image.gc","w")as f:
-        f.write(gcodestring.strip())
+    # with open("image.gc","w")as f:
+    #     f.write(gcodestring.strip())
 
-    return new_new_paths_flat, bounds
+    return new_paths_flat, bounds
 
 
 def animateProcess(new_new_paths_flat, bounds, fname=""):
     global last_point, segmenti
-    if fname != "":
-        import matplotlib
+    # if fname != "":
+    #     import matplotlib
 
-        matplotlib.use("Agg")
+    #     matplotlib.use("Agg")
 
     fig, ax = plt.subplots()
     ax.set_aspect(aspect=1)
@@ -309,11 +317,12 @@ def animateProcess(new_new_paths_flat, bounds, fname=""):
     anim = FuncAnimation(
         fig, update, frames=len(new_new_paths_flat), interval=50, repeat=False
     )
-    if fname != "":
-        log.debug("saving animation")
-        anim.save(fname, dpi=300, writer="ffmpeg")
-    else:
-        plt.show()
+    plt.show()
+    # if fname != "":
+    #     log.debug("saving animation")
+    #     anim.save(fname, dpi=300, writer="ffmpeg")
+    # else:
+    #     plt.show()
 
 
 @click.command()
@@ -367,7 +376,8 @@ def run(folder, prune, file, simplify, overwrite, animate, minx, maxx, miny, max
         log.debug(cmd)
         subprocess.run(cmd.split())
 
-        cmd = f"{imconvert} skeleton_negate.png -shave 1x1 -bordercolor black -border 1 -rotate 90 skeleton_border.png"
+        # cmd = f"{imconvert} skeleton_negate.png -shave 1x1 -bordercolor black -border 1 -rotate 90 skeleton_border.png"
+        cmd = f"{imconvert} skeleton_negate.png -rotate 90 skeleton_border.png"
         log.debug(cmd)
         subprocess.run(cmd.split())
 
