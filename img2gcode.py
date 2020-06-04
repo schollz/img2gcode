@@ -8,10 +8,10 @@
 # path_string = " ".join(path_strings)
 
 # print(path_string)
-import matplotlib.pyplot as plt
-import matplotlib.lines as mlines
-import matplotlib.colors as mcolors
-from matplotlib.animation import FuncAnimation
+# import matplotlib.pyplot as plt
+# import matplotlib.lines as mlines
+# import matplotlib.colors as mcolors
+# from matplotlib.animation import FuncAnimation
 from svgpathtools import svg2paths2, wsvg, Line, Path
 from svg.path import parse_path
 import numpy as np
@@ -25,6 +25,7 @@ from simplification.cutil import (
 )
 from loguru import logger as log
 import click
+from PIL import Image, ImageDraw
 
 import hashlib
 import ntpath
@@ -242,55 +243,78 @@ def processSVG(fnamein, fnameout, simplifylevel=5, pruneLittle=7, drawing_area=[
     return new_paths_flat, bounds
 
 
-def animateProcess(new_new_paths_flat, bounds, fname=""):
-    global last_point, segmenti
-    if fname != "":
-        import matplotlib
-
-        matplotlib.use("Agg")
-
-    fig, ax = plt.subplots()
-    ax.set_aspect(aspect=1)
-    plt.axis(bounds)
-
-    print(
-        "fig size: {0} DPI, size in inches {1}".format(
-            fig.get_dpi(), fig.get_size_inches()
-        )
-    )
-
-    t = tqdm(total=len(new_new_paths_flat))
-
-    last_point = [0, 0]
-    segmenti = 0
-    colors = list(mcolors.TABLEAU_COLORS)
-
-    def update(i):
-        global last_point, segmenti
-        if i > len(new_new_paths_flat):
-            return
-        t.update(1)
-        ele = new_new_paths_flat[i]
-        x1 = np.real(ele.start)
-        y1 = np.imag(ele.start)
-        x2 = np.real(ele.end)
-        y2 = np.imag(ele.end)
+def animateProcess(new_new_paths_flat, bounds, fname="out.gif"):
+    images = []
+    color_1 = (0, 0, 0)
+    color_2 = (255, 255, 255)
+    print(bounds)
+    im = Image.new('RGB', (bounds[1]-bounds[0], bounds[3]-bounds[2]), color_2)
+    last_point = [0,0]
+    for i,ele in enumerate(new_new_paths_flat):
+        x1 = np.real(ele.start)-bounds[0]
+        y1 = np.imag(ele.start)-bounds[2]
+        x2 = np.real(ele.end)-bounds[0]
+        y2 = np.imag(ele.end)-bounds[2]
         if x1 != last_point[0] and y1 != last_point[1]:
-            segmenti = segmenti + 1
-        plt.plot(
-            [x1, x2], [y1, y2], "-", color=colors[segmenti % len(colors)], linewidth=0.4
-        )
+            pass # change color
+        draw = ImageDraw.Draw(im)
+        draw.line((x1,y1,x2,y2), fill=color_1,width=6)
+        if i%4 == 0:
+            im0 = im.copy()
+            images.append(im0)
         last_point = [x2, y2]
-        return
+    log.debug(len(images))
+    log.debug(f"saving {fname}")
+    images[0].save(fname,
+               save_all=True, append_images=images[1:], optimize=False, duration=1, loop=2)
+    # global last_point, segmenti
+    # if fname != "":
+    #     import matplotlib
 
-    anim = FuncAnimation(
-        fig, update, frames=len(new_new_paths_flat), interval=50, repeat=False
-    )
-    if fname != "":
-        log.debug("saving animation")
-        anim.save(fname, dpi=300, writer="ffmpeg")
-    else:
-        plt.show()
+    #     matplotlib.use("Agg")
+
+    # fig, ax = plt.subplots()
+    # ax.set_aspect(aspect=1)
+    # plt.axis(bounds)
+
+    # print(
+    #     "fig size: {0} DPI, size in inches {1}".format(
+    #         fig.get_dpi(), fig.get_size_inches()
+    #     )
+    # )
+
+    # t = tqdm(total=len(new_new_paths_flat))
+
+    # last_point = [0, 0]
+    # segmenti = 0
+    # colors = list(mcolors.TABLEAU_COLORS)
+
+    # def update(i):
+    #     global last_point, segmenti
+    #     if i > len(new_new_paths_flat):
+    #         return
+    #     t.update(1)
+    #     ele = new_new_paths_flat[i]
+    #     x1 = np.real(ele.start)
+    #     y1 = np.imag(ele.start)
+    #     x2 = np.real(ele.end)
+    #     y2 = np.imag(ele.end)
+    #     if x1 != last_point[0] and y1 != last_point[1]:
+    #         segmenti = segmenti + 1
+    #     plt.plot(
+    #         [x1, x2], [y1, y2], "-", color=colors[segmenti % len(colors)], linewidth=0.4
+    #     )
+    #     last_point = [x2, y2]
+    #     return
+
+    # anim = FuncAnimation(
+    #     fig, update, frames=len(new_new_paths_flat), interval=50, repeat=False
+    # )
+    # if fname != "":
+    #     log.debug("saving animation")
+    #     anim.save(fname, dpi=300, writer="ffmpeg")
+    # else:
+    #     plt.show()
 
 
 @click.command()
@@ -374,9 +398,11 @@ def run(folder, prune,skeleton, file, simplify, overwrite, animate, minx, maxx, 
 
     animatefile = ""
     if animate:
-        animatefile = "animation.mp4"
+        animatefile = "1.gif"
         animateProcess(new_new_paths_flat, bounds, animatefile)
-
+        cmd = f"{imconvert} 1.gif -rotate 270 animation.gif"
+        log.debug(cmd)
+        subprocess.run(cmd.split())
 
 if __name__ == "__main__":
     run()
