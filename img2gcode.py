@@ -166,7 +166,7 @@ def processSVG(fnamein, fnameout, drawing_area=[650, 1775, -1000, 1000]):
         ):
             segments.append(segment)
             segment = []
-        elif d > 100000:  # this is to prevent the border
+        elif d > 500:  # this is to prevent the border
             segments.append(segment)
             segment = []
             continue
@@ -193,9 +193,26 @@ def processSVG(fnamein, fnameout, drawing_area=[650, 1775, -1000, 1000]):
                 coords.append([x1, y1])
             coords.append([x2, y2])
         total_points_original += len(coords)
-        simplified = coords
+
+        # prune coordinates that jump too far
+        coords2 = []
+        total_length = 0
+        for j, coord in enumerate(coords):
+            if j == 0:
+                continue
+            d = dist2(coords[j-1],coords[j])
+            total_length += d
+            if d > ((drawing_area[1]-drawing_area[0])/2+(drawing_area[3]-drawing_area[2])/2):
+                break
+            coords2.append(coords[j-1])
+
+        # prune lines that are really short
+        if total_length < ((drawing_area[1]-drawing_area[0])/2+(drawing_area[3]-drawing_area[2])/2)/7:
+            continue
+
+        simplified = coords2
         # simplified = fuse_linear(simplified,30)
-        simplified = simplify_coords(simplified, 5.0)
+        simplified = simplify_coords(simplified,5.0)
         if len(simplified) < 2:
             continue
         total_points_new += len(simplified)
@@ -215,7 +232,7 @@ def processSVG(fnamein, fnameout, drawing_area=[650, 1775, -1000, 1000]):
                     complex(simplified[j][0], simplified[j][1]),
                 )
             )
-        if i > -1:
+        if i > -1 and len(paths)>1:
             new_new_paths.append(paths)
 
     log.debug("had {} points ", total_points_original)
@@ -296,6 +313,7 @@ def animateProcess(new_new_paths_flat, bounds, fname=""):
     anim = FuncAnimation(
         fig, update, frames=len(new_new_paths_flat), interval=50, repeat=False
     )
+    plt.show()
     if fname != "":
         log.debug("saving animation")
         anim.save(fname, dpi=300, writer="ffmpeg")
@@ -337,25 +355,25 @@ def run(folder, file, animate, minx, maxx, miny, maxy, threshold):
 
     width = maxy - miny
     height = maxx - minx
-    cmd = f"{imconvert} {file} -resize {width}x{height} -background White -gravity center -extent {width}x{height} -threshold {threshold}%% thresholded.png"
-    log.debug(cmd)
-    subprocess.run(cmd.split())
+    # cmd = f"{imconvert} {file} -resize {width}x{height} -background White -gravity center -extent {width}x{height} -threshold {threshold}%% thresholded.png"
+    # log.debug(cmd)
+    # subprocess.run(cmd.split())
 
-    cmd = f"{imconvert} thresholded.png -negate -morphology Thinning:-1 Skeleton skeleton.png"
-    log.debug(cmd)
-    subprocess.run(cmd.split())
+    # cmd = f"{imconvert} thresholded.png -negate -morphology Thinning:-1 Skeleton skeleton.png"
+    # log.debug(cmd)
+    # subprocess.run(cmd.split())
 
-    cmd = f"{imconvert} skeleton.png -negate skeleton_negate.png"
-    log.debug(cmd)
-    subprocess.run(cmd.split())
+    # cmd = f"{imconvert} skeleton.png -negate skeleton_negate.png"
+    # log.debug(cmd)
+    # subprocess.run(cmd.split())
 
-    cmd = f"{imconvert} skeleton_negate.png -shave 1x1 -bordercolor black -border 1 -rotate 90 skeleton_border.bmp"
-    log.debug(cmd)
-    subprocess.run(cmd.split())
+    # cmd = f"{imconvert} skeleton_negate.png -shave 1x1 -bordercolor black -border 1 -rotate 90 skeleton_border.bmp"
+    # log.debug(cmd)
+    # subprocess.run(cmd.split())
 
-    cmd = f"potrace -b svg -o potrace.svg skeleton_border.bmp"
-    log.debug(cmd)
-    subprocess.run(cmd.split())
+    # cmd = f"potrace -b svg -o potrace.svg skeleton_border.bmp"
+    # log.debug(cmd)
+    # subprocess.run(cmd.split())
 
     new_new_paths_flat, bounds = processSVG("potrace.svg", "final.svg")
     animatefile = ""
