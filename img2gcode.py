@@ -166,7 +166,7 @@ def processSVG(fnamein, fnameout, simplifylevel=5, drawing_area=[650, 1775, -100
         ):
             segments.append(segment)
             segment = []
-        elif d > 500:  # this is to prevent the border
+        elif d > ((drawing_area[1]-drawing_area[0])/2+(drawing_area[3]-drawing_area[2])/2):  # this is to prevent the border
             segments.append(segment)
             segment = []
             continue
@@ -295,7 +295,6 @@ def animateProcess(new_new_paths_flat, bounds, fname=""):
         if i > len(new_new_paths_flat):
             return
         t.update(1)
-        label = "timestep {0}".format(i)
         ele = new_new_paths_flat[i]
         x1 = np.real(ele.start)
         y1 = np.imag(ele.start)
@@ -303,7 +302,6 @@ def animateProcess(new_new_paths_flat, bounds, fname=""):
         y2 = np.imag(ele.end)
         if x1 != last_point[0] and y1 != last_point[1]:
             segmenti = segmenti + 1
-        d = dist2([x1, y1], [x2, y2])
         plt.plot(
             [x1, x2], [y1, y2], "-", color=colors[segmenti % len(colors)], linewidth=0.4
         )
@@ -313,7 +311,6 @@ def animateProcess(new_new_paths_flat, bounds, fname=""):
     anim = FuncAnimation(
         fig, update, frames=len(new_new_paths_flat), interval=50, repeat=False
     )
-    plt.show()
     if fname != "":
         log.debug("saving animation")
         anim.save(fname, dpi=300, writer="ffmpeg")
