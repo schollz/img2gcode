@@ -369,7 +369,7 @@ def run(folder, prune,skeleton, file, simplify, overwrite, animate, minx, maxx, 
 
     new_new_paths_flat, bounds = processSVG("potrace.svg", "final.svg",simplifylevel=simplify,pruneLittle=prune,drawing_area = [minx,maxx,miny,maxy])
 
-    cmd = f"{imconvert} final.svg -flip -rotate 270 final.png"
+    cmd = f"{imconvert} final.svg -rotate 270 final.png"
     log.debug(cmd)
     subprocess.run(cmd.split())
 
