@@ -38,15 +38,17 @@ Once installed, you can install the required Python packages with pip:
 You can just download and run the script directly:
 
 	wget https://raw.githubusercontent.com/schollz/img2gcode/master/img2gcode.py
-	python3 img2gcode.py --file image.jpg --animate
+	python3 img2gcode.py --file image.jpg --animate --simplify 2 --threshold 80
+
+Try changing `--simplify` from 1 to 10 to decrease the number of lines. You can also increase `--threshold` if you aren't getting the whole picture. You can also add an option `--centerline` to get a better skeleton.
 
 After it runs it should create a folder `image.jpg.drawbot`. In that folder there are a number of files:
 
 - `image.gc`: contains the final GCode coordinates
-- `final.svg`: contains the final SVG after simplification and transforming
-- `animation.mp4`: contains the animation showing the drawing process
+- `final.svg` / `final.png`: contains the final image after simplification and transforming
+- `animation.gif`: contains the animation showing the drawing process
 - `potrace.svg`: shows the untransformed SVG after skeleton
-- `skeleton*`: shows the skeleton transformations from the image
+- `skeleton*`: shows the skeleton transformations from the image (if `--centerline` was added)
 - `thresholded.png`: shows how the image looks after initial thresholding
 
 

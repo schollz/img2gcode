@@ -325,7 +325,7 @@ def animateProcess(new_new_paths_flat, bounds, fname="out.gif"):
 @click.option("--folder",default=".", help="folder to output into")
 @click.option("--animate/--no-animate", default=False)
 @click.option("--overwrite/--no-overwrite", default=True)
-@click.option("--skeleton/--no-skeleton", default=False)
+@click.option("--centerline/--no-centerline", default=False)
 @click.option("--minx", default=650, help="minimum x")
 @click.option("--maxx", default=1775, help="maximum x")
 @click.option("--miny", default=-1000, help="minimum y")
@@ -334,7 +334,7 @@ def animateProcess(new_new_paths_flat, bounds, fname="out.gif"):
 @click.option("--prune", default=7, help="amount of pruning of small things")
 @click.option("--simplify", default=5, help="simplify level")
 @click.option("--threshold", default=60, help="percent threshold (0-100)")
-def run(folder, prune,skeleton, file, simplify, overwrite, animate, minx, maxx, miny, maxy, threshold):
+def run(folder, prune,centerline, file, simplify, overwrite, animate, minx, maxx, miny, maxy, threshold):
     imconvert = "convert"
     if os.name == "nt":
         imconvert = "imconvert"
@@ -360,7 +360,7 @@ def run(folder, prune,skeleton, file, simplify, overwrite, animate, minx, maxx, 
     width = maxy - miny
     height = maxx - minx
     if not os.path.exists("potrace.svg") or overwrite:
-        if skeleton:
+        if centerline:
             cmd = f"{imconvert} {file} -resize {width}x{height} -background White -gravity center -extent {width}x{height} -threshold {threshold}%% thresholded.png"
             log.debug(cmd)
             subprocess.run(cmd.split())
@@ -396,6 +396,7 @@ def run(folder, prune,skeleton, file, simplify, overwrite, animate, minx, maxx, 
             cmd = f"potrace -b svg -o potrace.svg -n thresholded.bmp"
             log.debug(cmd)
             subprocess.run(cmd.split())
+            os.remove("thresholded.bmp")
 
     new_new_paths_flat, bounds = processSVG("potrace.svg", "final.svg",simplifylevel=simplify,pruneLittle=prune,drawing_area = [minx,maxx,miny,maxy])
 
@@ -410,6 +411,7 @@ def run(folder, prune,skeleton, file, simplify, overwrite, animate, minx, maxx, 
         cmd = f"{imconvert} 1.gif -rotate 270 animation.gif"
         log.debug(cmd)
         subprocess.run(cmd.split())
+        os.remove("1.gif")
 
 if __name__ == "__main__":
     run()
