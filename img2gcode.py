@@ -13,6 +13,7 @@ import matplotlib.lines as mlines
 import matplotlib.colors as mcolors
 from matplotlib.animation import FuncAnimation
 from svgpathtools import svg2paths2, wsvg, Line, Path
+from svg.path import parse_path
 import numpy as np
 from tqdm import tqdm
 from simplification.cutil import (
@@ -64,7 +65,7 @@ def fuse_linear(points, d):
     deleted = {}
     for _, p1 in enumerate(points):
         has_close_point = False
-        for _, p2 in enumerate(ret):
+        for j, p2 in enumerate(ret):
             if dist2(p1, p2) < d:
                 has_close_point = True
                 break
@@ -91,17 +92,19 @@ def processSVG(fnamein, fnameout, simplifylevel=5, pruneLittle=7, drawing_area=[
 
     new_paths = []
     bounds = [1000000, -100000, 100000, -1000000]
-    for ii, path in enumerate(paths):
+    for ii, path in enumerate(attributes):
         new_path = []
-
+        point_start = []
+        point_end = []
+        path = parse_path(attributes[ii]['d'])
         for jj, ele in enumerate(path):
-            if jj > len(path)/2:
-                ## TODO ONLY DO THIS IF THE START AND END POINTS ARE CLOSE!
-                continue
             x1 = np.real(ele.start)
             y1 = np.imag(ele.start)
             x2 = np.real(ele.end)
             y2 = np.imag(ele.end)
+            if jj == 0:
+                point_start = [x1,y1]
+            point_end = [x2,y2]
             if ii == 0:
                 if x1 < bounds[0]:
                     bounds[0] = x1
@@ -131,17 +134,27 @@ def processSVG(fnamein, fnameout, simplifylevel=5, pruneLittle=7, drawing_area=[
                     if k == 0:
                         continue
                     new_path.append(Line(complex(np.real(points[k - 1]),np.imag(points[k-1])),complex(np.real(points[k ]),np.imag(points[k]))))
-            else:
+            elif "Line" in str(ele):
                 new_path.append(Line(ele.start, ele.end))
-        new_paths.append(new_path)
+            elif "Move" in str(ele):
+                point_start = [x1,y1]
+            elif "Close" in str(ele):
+                # if dist2(point_start,point_end)<1:
+                #     new_path = new_path[:int(len(new_path)/1.5)]
+                new_paths.append(new_path)
+                new_path =[]
+
+        if len(new_path) > 0:
+            # if dist2(point_start,point_end)<1:
+            #     new_path = new_path[:int(len(new_path)/1.5)]
+            new_paths.append(new_path)
 
 
     #transform points
     print(bounds)
-    bounds = [0.0, 11250.0, 0.0, 20000.0]
-    last_point = [0, 0]
-    segments = []
-    segment = []
+    bounds = [0.0, 10*(drawing_area[1]-drawing_area[0]), 0.0,10*(drawing_area[3]-drawing_area[2])]
+    num_coords = 0
+    num_coords_simplified = 0
     new_paths_flat = []
     new_new_paths = []
     for j, path in enumerate(new_paths):
@@ -166,10 +179,15 @@ def processSVG(fnamein, fnameout, simplifylevel=5, pruneLittle=7, drawing_area=[
             coords.append([x1,y1])
             coords.append([x2,y2])
 
-        simplified = simplify_coords(coords,10)
+        simplified = coords
+        simplified = simplify_coords(simplified ,simplifylevel)
+        
+        num_coords += len(coords)
+        num_coords_simplified += len(simplified)
 
         new_path = []
         for i,coord in enumerate(simplified):
+            
             if i == 0:
                 continue
             path = Line(complex(simplified[i-1][0],simplified[i-1][1]),complex(simplified[i][0],simplified[i][1]))
@@ -177,98 +195,49 @@ def processSVG(fnamein, fnameout, simplifylevel=5, pruneLittle=7, drawing_area=[
             new_paths_flat.append(path)
             # new_paths[j][i] = Line(complex(x1,y1),complex(x2,y2))
         new_new_paths.append(new_path)
-        print(new_path)
     bounds = drawing_area
 
-    # log.debug("have {} segments".format(len(segments)))
-    # log.debug("first segment has {} lines".format(len(segments[0])))
-    # total_points_original = 0
-    # total_points_new = 0
-    # new_new_paths = []
-    # new_new_paths_flat = []
-    # for i, segment in enumerate(segments):
-    #     coords = []
-    #     for j, ele in enumerate(segment):
-    #         x1 = np.real(ele.start)
-    #         y1 = np.imag(ele.start)
-    #         x2 = np.real(ele.end)
-    #         y2 = np.imag(ele.end)
-    #         if j == 0:
-    #             coords.append([x1, y1])
-    #         coords.append([x2, y2])
-    #     total_points_original += len(coords)
-
-    #     # prune coordinates that jump too far
-    #     coords2 = []
-    #     total_length = 0
-    #     for j, coord in enumerate(coords):
-    #         if j == 0:
-    #             coords2.append(coords[j])
-    #             continue
-    #         d = dist2(coords[j-1],coords[j])
-    #         total_length += d
-    #         if d > ((drawing_area[1]-drawing_area[0])/2+(drawing_area[3]-drawing_area[2])/2)/.1 and (abs(coords[j-1][0]-coords[j][0]) < 5 or abs(coords[j-1][1]-coords[j][1]) < 5):
-    #             break
-    #         coords2.append(coords[j])
-
-    #     # prune lines that are really short
-    #     if total_length < ((drawing_area[1]-drawing_area[0])/2+(drawing_area[3]-drawing_area[2])/2)/pruneLittle:
-    #         continue
-
-    #     simplified = coords2
-    #     # simplified = fuse_linear(simplified,30)
-    #     simplified = simplify_coords(simplified,simplifylevel)
-    #     if len(simplified) < 2:
-    #         continue
-    #     total_points_new += len(simplified)
-    #     paths = Path()
-    #     for j, coord in enumerate(simplified):
-    #         if j == 0:
-    #             continue
-    #         paths.append(
-    #             Line(
-    #                 complex(simplified[j - 1][0], simplified[j - 1][1]),
-    #                 complex(simplified[j][0], simplified[j][1]),
-    #             )
-    #         )
-    #         new_new_paths_flat.append(
-    #             Line(
-    #                 complex(simplified[j - 1][0], simplified[j - 1][1]),
-    #                 complex(simplified[j][0], simplified[j][1]),
-    #             )
-    #         )
-    #     if i > -1 and len(paths)>1:
-    #         new_new_paths.append(paths)
-
-    # log.debug("had {} points ", total_points_original)
-    # log.debug("now have {} points".format(total_points_new))
-    # log.debug("now have {} lines".format(len(new_new_paths)))
+    log.debug(f"have {num_coords} coordinates")
+    log.debug(f"have {num_coords_simplified} coordinates after simplifying")
+#     with open("test.svg","w") as f:
+#         f.write("""<?xml version="1.0" ?><svg baseProfile="full" height="600px" version="1.1" viewBox="940.1115 425.9115 510.777 933.177" width="329px" xmlns="http://www.w3.org/2000/svg" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xlink="http://www.w3.org/1999/xlink"><defs/>
+# """)
+#         for i, path in enumerate(new_new_paths):
+#             pathstring = ""
+#             for j, ele in enumerate(path):
+#                 x1 = np.real(ele.start)
+#                 y1 = np.imag(ele.start)
+#                 x2 = np.real(ele.end)
+#                 y2 = np.imag(ele.end)
+#                 if j == 0:
+#                     pathstring += f"M {int(x1)},{int(y1)} "
+                
+#                 if j > 0 or len(path) == 1:
+#                     pathstring += f"L {int(x2)},{int(y2)} "
+#             f.write(f"<path d=\"{pathstring}\""+""" fill="none" stroke="#000000" stroke-width="0.777"/>""" + "\n")
+#         f.write("</svg>\n")
     wsvg(new_paths_flat, filename=fnameout)
-    # TODO: encode your own svg, this thing doesn't work to break it apart
     log.debug("wrote image to {}", fnameout)
 
     log.info(bounds)
 
-    # gcodestring = "G01 Z1000 "
-    # for i, segment in enumerate(segments):
-    #     coords = []
-    #     if len(segment) < 2:
-    #         continue
-    #     for j, ele in enumerate(segment):
-    #         x1 = np.real(ele.start)
-    #         y1 = np.imag(ele.start)
-    #         x2 = np.real(ele.end)
-    #         y2 = np.imag(ele.end)
-    #         if j == 0:
-    #             gcodestring += f"G01 X{int(x1)} Y{int(y1)} Z1000 "
-    #             gcodestring += f"G01 Z0 "
-    #         else:
-    #             gcodestring += f"G01 X{int(x1)} Y{int(y1)} Z0 "    
+    gcodestring = "G01 Z1000 "
+    for i, path in enumerate(new_new_paths):
+        coords = []
+        for j, ele in enumerate(path):
+            x1 = np.real(ele.start)
+            y1 = np.imag(ele.start)
+            x2 = np.real(ele.end)
+            y2 = np.imag(ele.end)
+            if j == 0:
+                gcodestring += f"G01 X{int(x1)} Y{int(y1)} Z1000 "
+                gcodestring += f"G01 Z0 "
+            else:
+                gcodestring += f"G01 X{int(x1)} Y{int(y1)} Z0 "    
 
-    #     gcodestring += "G01 Z1000 "
-
-    # with open("image.gc","w")as f:
-    #     f.write(gcodestring.strip())
+        gcodestring += "G01 Z1000 "
+    with open("image.gc","w")as f:
+        f.write(gcodestring.strip())
 
     return new_paths_flat, bounds
 
@@ -330,6 +299,7 @@ def animateProcess(new_new_paths_flat, bounds, fname=""):
 @click.option("--folder",default=".", help="folder to output into")
 @click.option("--animate/--no-animate", default=False)
 @click.option("--overwrite/--no-overwrite", default=True)
+@click.option("--skeleton/--no-skeleton", default=False)
 @click.option("--minx", default=650, help="minimum x")
 @click.option("--maxx", default=1775, help="maximum x")
 @click.option("--miny", default=-1000, help="minimum y")
@@ -338,7 +308,7 @@ def animateProcess(new_new_paths_flat, bounds, fname=""):
 @click.option("--prune", default=7, help="amount of pruning of small things")
 @click.option("--simplify", default=5, help="simplify level")
 @click.option("--threshold", default=60, help="percent threshold (0-100)")
-def run(folder, prune, file, simplify, overwrite, animate, minx, maxx, miny, maxy, threshold):
+def run(folder, prune,skeleton, file, simplify, overwrite, animate, minx, maxx, miny, maxy, threshold):
     imconvert = "convert"
     if os.name == "nt":
         imconvert = "imconvert"
@@ -364,32 +334,45 @@ def run(folder, prune, file, simplify, overwrite, animate, minx, maxx, miny, max
     width = maxy - miny
     height = maxx - minx
     if not os.path.exists("potrace.svg") or overwrite:
-        cmd = f"{imconvert} {file} -resize {width}x{height} -background White -gravity center -extent {width}x{height} -threshold {threshold}%% thresholded.png"
-        log.debug(cmd)
-        subprocess.run(cmd.split())
+        if skeleton:
+            cmd = f"{imconvert} {file} -resize {width}x{height} -background White -gravity center -extent {width}x{height} -threshold {threshold}%% thresholded.png"
+            log.debug(cmd)
+            subprocess.run(cmd.split())
 
-        cmd = f"{imconvert} thresholded.png -negate -morphology Thinning:-1 Skeleton skeleton.png"
-        log.debug(cmd)
-        subprocess.run(cmd.split())
+            cmd = f"{imconvert} thresholded.png -negate -morphology Thinning:-1 Skeleton skeleton.png"
+            log.debug(cmd)
+            subprocess.run(cmd.split())
 
-        cmd = f"{imconvert} skeleton.png -negate skeleton_negate.png"
-        log.debug(cmd)
-        subprocess.run(cmd.split())
+            cmd = f"{imconvert} skeleton.png -negate skeleton_negate.png"
+            log.debug(cmd)
+            subprocess.run(cmd.split())
 
-        # cmd = f"{imconvert} skeleton_negate.png -shave 1x1 -bordercolor black -border 1 -rotate 90 skeleton_border.png"
-        cmd = f"{imconvert} skeleton_negate.png -rotate 90 skeleton_border.png"
-        log.debug(cmd)
-        subprocess.run(cmd.split())
+            cmd = f"{imconvert} skeleton_negate.png -rotate 90 skeleton_border.png"
+            log.debug(cmd)
+            subprocess.run(cmd.split())
 
-        cmd = f"{imconvert} skeleton_border.png -flip skeleton_border_flip.bmp"
-        log.debug(cmd)
-        subprocess.run(cmd.split())
+            cmd = f"{imconvert} skeleton_border.png -flip skeleton_border_flip.bmp"
+            log.debug(cmd)
+            subprocess.run(cmd.split())
 
-        cmd = f"potrace -b svg -o potrace.svg skeleton_border_flip.bmp"
-        log.debug(cmd)
-        subprocess.run(cmd.split())
+            cmd = f"potrace -b svg -o potrace.svg skeleton_border_flip.bmp"
+            log.debug(cmd)
+            subprocess.run(cmd.split())
+        else:
+            cmd = f"{imconvert} {file} -resize {width}x{height} -background White -gravity center -extent {width}x{height} -threshold {threshold}%% -rotate 90 -flip thresholded.bmp"
+            log.debug(cmd)
+            subprocess.run(cmd.split())
+
+            cmd = f"potrace -b svg -o potrace.svg -n thresholded.bmp"
+            log.debug(cmd)
+            subprocess.run(cmd.split())
 
     new_new_paths_flat, bounds = processSVG("potrace.svg", "final.svg",simplifylevel=simplify,pruneLittle=prune,drawing_area = [minx,maxx,miny,maxy])
+
+    cmd = f"{imconvert} final.svg -flip -rotate 270 final.png"
+    log.debug(cmd)
+    subprocess.run(cmd.split())
+
     animatefile = ""
     if animate:
         animatefile = "animation.mp4"
