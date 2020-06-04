@@ -6,7 +6,7 @@ This script, `img2gcode.py` will take any image and convert it into a nice line 
 <img src=".github/sun.jpg" height=300>
 </p>
 
-You can specify the dimensions of the underlying plotter. For the example below, generated from the iamge above, the dimensions for [the Line-us drawing arm](https://github.com/Line-us/Line-us-Programming/blob/master/Documentation/LineUsDrawingArea.pdf)).
+You can specify the dimensions of the underlying plotter. For the example below, generated from the image above, the dimensions for [the Line-us drawing arm](https://github.com/Line-us/Line-us-Programming/blob/master/Documentation/LineUsDrawingArea.pdf)).
 
 <p align="center">
 <img src=".github/output.gif" height=300>
@@ -23,11 +23,11 @@ You need the following requirements:
 
 On Windows you can install with [scoop](https://scoop.sh/). Note that you must use `python37` to install Python because one of the libraries (simplification) on Windows is incompatible with Python3.8.
 
-	scoop install potrace ffmpeg imagemagick python37 make
+	scoop install potrace ffmpeg imagemagick python37
 
 On Linux you can install with apt:
 	
-	sudo apt install potrace ffmpeg imagemagick python3 make
+	sudo apt install potrace ffmpeg imagemagick python3
 
 Once installed, you can install the required Python packages with pip:
 

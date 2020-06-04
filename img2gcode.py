@@ -305,18 +305,25 @@ def animateProcess(new_new_paths_flat, bounds, fname=""):
 
 @click.command()
 @click.option("--file", prompt="image in?", help="svg to process")
+@click.option("--folder",default=".", help="folder to output into")
 @click.option("--animate/--no-animate", default=False)
 @click.option("--minx", default=650, help="minimum x")
 @click.option("--maxx", default=1775, help="maximum x")
 @click.option("--miny", default=-1000, help="minimum y")
 @click.option("--maxy", default=1000, help="maximum y")
 @click.option("--threshold", default=60, help="percent threshold (0-100)")
-def run(file, animate, minx, maxx, miny, maxy, threshold):
+def run(folder, file, animate, minx, maxx, miny, maxy, threshold):
     imconvert = "convert"
     if os.name == "nt":
         imconvert = "imconvert"
 
-    foldername = ntpath.basename(file) + ".img2gcode"
+    if folder != ".":
+        try:
+            os.mkdir(folder)
+        except:
+            pass
+
+    foldername = os.path.join(folder, ntpath.basename(file) + ".img2gcode")
     try:
         os.mkdir(foldername)
     except:
