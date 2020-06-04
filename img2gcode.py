@@ -244,10 +244,10 @@ def processSVG(fnamein, fnameout, simplifylevel=5, pruneLittle=7, drawing_area=[
 
 def animateProcess(new_new_paths_flat, bounds, fname=""):
     global last_point, segmenti
-    # if fname != "":
-    #     import matplotlib
+    if fname != "":
+        import matplotlib
 
-    #     matplotlib.use("Agg")
+        matplotlib.use("Agg")
 
     fig, ax = plt.subplots()
     ax.set_aspect(aspect=1)
@@ -286,12 +286,11 @@ def animateProcess(new_new_paths_flat, bounds, fname=""):
     anim = FuncAnimation(
         fig, update, frames=len(new_new_paths_flat), interval=50, repeat=False
     )
-    plt.show()
-    # if fname != "":
-    #     log.debug("saving animation")
-    #     anim.save(fname, dpi=300, writer="ffmpeg")
-    # else:
-    #     plt.show()
+    if fname != "":
+        log.debug("saving animation")
+        anim.save(fname, dpi=300, writer="ffmpeg")
+    else:
+        plt.show()
 
 
 @click.command()
