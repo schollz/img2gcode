@@ -83,7 +83,7 @@ def cubic_bezier_sample(start, control1, control2, end):
     return lambda t: np.array([t ** 3, t ** 2, t, 1]).dot(partial)
 
 
-def processSVG(fnamein, fnameout, simplifylevel=5, drawing_area=[650, 1775, -1000, 1000]):
+def processSVG(fnamein, fnameout, simplifylevel=5, pruneLittle=7, drawing_area=[650, 1775, -1000, 1000]):
     paths, attributes, svg_attributes = svg2paths2(fnamein)
     log.info("have {} paths", len(paths))
 
@@ -207,7 +207,7 @@ def processSVG(fnamein, fnameout, simplifylevel=5, drawing_area=[650, 1775, -100
             coords2.append(coords[j-1])
 
         # prune lines that are really short
-        if total_length < ((drawing_area[1]-drawing_area[0])/2+(drawing_area[3]-drawing_area[2])/2)/7:
+        if total_length < ((drawing_area[1]-drawing_area[0])/2+(drawing_area[3]-drawing_area[2])/2)/pruneLittle:
             continue
 
         simplified = coords2
@@ -328,9 +328,10 @@ def animateProcess(new_new_paths_flat, bounds, fname=""):
 @click.option("--miny", default=-1000, help="minimum y")
 @click.option("--maxy", default=1000, help="maximum y")
 @click.option("--maxy", default=1000, help="maximum y")
+@click.option("--prune", default=7, help="amount of pruning of small things")
 @click.option("--simplify", default=5, help="simplify level")
 @click.option("--threshold", default=60, help="percent threshold (0-100)")
-def run(folder, file, simplify, overwrite, animate, minx, maxx, miny, maxy, threshold):
+def run(folder, prune, file, simplify, overwrite, animate, minx, maxx, miny, maxy, threshold):
     imconvert = "convert"
     if os.name == "nt":
         imconvert = "imconvert"
@@ -376,7 +377,7 @@ def run(folder, file, simplify, overwrite, animate, minx, maxx, miny, maxy, thre
         log.debug(cmd)
         subprocess.run(cmd.split())
 
-    new_new_paths_flat, bounds = processSVG("potrace.svg", "final.svg",simplifylevel=simplify,drawing_area = [minx,maxx,miny,maxy])
+    new_new_paths_flat, bounds = processSVG("potrace.svg", "final.svg",simplifylevel=simplify,pruneLittle=prune,drawing_area = [minx,maxx,miny,maxy])
     animatefile = ""
     if animate:
         animatefile = "animation.mp4"
