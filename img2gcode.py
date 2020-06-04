@@ -158,18 +158,15 @@ def processSVG(fnamein, fnameout, simplifylevel=5, pruneLittle=7, drawing_area=[
         y2 = round(y2)
 
         d = dist2([x1, y1], [x2, y2])
+        # check the max segment
         if (
             x1 != last_point[0]
             and y1 != last_point[1]
             and last_point[0] != 0
             and last_point[1] != 0
-        ):
+        ) or d > ((drawing_area[1]-drawing_area[0])/2+(drawing_area[3]-drawing_area[2])/2)/32:
             segments.append(segment)
             segment = []
-        elif d > ((drawing_area[1]-drawing_area[0])/2+(drawing_area[3]-drawing_area[2])/2):  # this is to prevent the border
-            segments.append(segment)
-            segment = []
-            continue
         segment.append(Line(complex(x1, y1), complex(x2, y2)))
         last_point = [x2, y2]
     segments.append(segment)
@@ -199,12 +196,13 @@ def processSVG(fnamein, fnameout, simplifylevel=5, pruneLittle=7, drawing_area=[
         total_length = 0
         for j, coord in enumerate(coords):
             if j == 0:
+                coords2.append(coords[j])
                 continue
             d = dist2(coords[j-1],coords[j])
             total_length += d
-            if d > ((drawing_area[1]-drawing_area[0])/2+(drawing_area[3]-drawing_area[2])/2):
+            if d > ((drawing_area[1]-drawing_area[0])/2+(drawing_area[3]-drawing_area[2])/2)/.1 and (abs(coords[j-1][0]-coords[j][0]) < 5 or abs(coords[j-1][1]-coords[j][1]) < 5):
                 break
-            coords2.append(coords[j-1])
+            coords2.append(coords[j])
 
         # prune lines that are really short
         if total_length < ((drawing_area[1]-drawing_area[0])/2+(drawing_area[3]-drawing_area[2])/2)/pruneLittle:
@@ -369,11 +367,15 @@ def run(folder, prune, file, simplify, overwrite, animate, minx, maxx, miny, max
         log.debug(cmd)
         subprocess.run(cmd.split())
 
-        cmd = f"{imconvert} skeleton_negate.png -shave 1x1 -bordercolor black -border 1 -rotate 90 skeleton_border.bmp"
+        cmd = f"{imconvert} skeleton_negate.png -shave 1x1 -bordercolor black -border 1 -rotate 90 skeleton_border.png"
         log.debug(cmd)
         subprocess.run(cmd.split())
 
-        cmd = f"potrace -b svg -o potrace.svg skeleton_border.bmp"
+        cmd = f"{imconvert} skeleton_border.png -flip skeleton_border_flip.bmp"
+        log.debug(cmd)
+        subprocess.run(cmd.split())
+
+        cmd = f"potrace -b svg -o potrace.svg skeleton_border_flip.bmp"
         log.debug(cmd)
         subprocess.run(cmd.split())
 
