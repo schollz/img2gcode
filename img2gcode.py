@@ -385,11 +385,11 @@ def run(folder, prune,skeleton, file, simplify, overwrite, animate, minx, maxx, 
             log.debug(cmd)
             subprocess.run(cmd.split())
         else:
-            cmd = f"{imconvert} {file} -resize {width}x{height} -background White -gravity center -extent {width}x{height} -threshold {threshold}%% -rotate 90 -flip thresholded.png"
+            cmd = f"{imconvert} {file} -resize {width}x{height} -background White -gravity center -extent {width}x{height} -threshold {threshold}%% thresholded.png"
             log.debug(cmd)
             subprocess.run(cmd.split())
 
-            cmd = f"{imconvert} thresholded.png thresholded.bmp"
+            cmd = f"{imconvert} thresholded.png -rotate 90 -flip  thresholded.bmp"
             log.debug(cmd)
             subprocess.run(cmd.split())
 
