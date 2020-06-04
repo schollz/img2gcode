@@ -222,7 +222,7 @@ def processSVG(fnamein, fnameout, simplifylevel=5, pruneLittle=7, drawing_area=[
 
     log.info(bounds)
 
-    gcodestring = "G01 Z1000 "
+    gcodestring = "G01 Z1000"
     for i, path in enumerate(new_new_paths):
         coords = []
         for j, ele in enumerate(path):
@@ -231,12 +231,12 @@ def processSVG(fnamein, fnameout, simplifylevel=5, pruneLittle=7, drawing_area=[
             x2 = np.real(ele.end)
             y2 = np.imag(ele.end)
             if j == 0:
-                gcodestring += f"G01 X{int(x1)} Y{int(y1)} Z1000 "
-                gcodestring += f"G01 Z0 "
+                gcodestring += f"\nG01 X{int(x1)} Y{int(y1)} Z1000"
+                gcodestring += f"\nG01 Z0"
             else:
-                gcodestring += f"G01 X{int(x1)} Y{int(y1)} Z0 "    
+                gcodestring += f"\nG01 X{int(x1)} Y{int(y1)} Z0"    
 
-        gcodestring += "G01 Z1000 "
+        gcodestring += "\nG01 Z1000"
     with open("image.gc","w")as f:
         f.write(gcodestring.strip())
 

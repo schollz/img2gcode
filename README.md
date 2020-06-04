@@ -31,7 +31,7 @@ On Linux you can install with apt:
 
 Once installed, you can install the required Python packages with pip:
 
-	python3 -m pip install click loguru matplotlib numpy simplification svgpathtools svgwrite tqdm pillow
+	python3 -m pip install click loguru numpy simplification svgpathtools svgwrite tqdm pillow svg.path
 
 ## Run
 
