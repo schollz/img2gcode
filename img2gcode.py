@@ -96,6 +96,8 @@ def processAutotraceSVG(
     new_paths = []
     for ii, path in enumerate(attributes):
         new_path = []
+        if '000000' not in attributes[ii]['style']:
+            continue
         path = parse_path(attributes[ii]["d"])
         for jj, ele in enumerate(path):
             x1 = round(np.real(ele.start) + drawing_area[0])
@@ -172,7 +174,9 @@ def processAutotraceSVG(
     with open("final.svg", "w") as f:
         f.write(
             """<?xml version="1.0" standalone="yes"?>
-<svg width="1125" height="2000">"""
+<svg width="1125" height="2000">
+<g transform="translate(-650 1000)">
+"""
         )
         for i, path in enumerate(new_new_paths):
             pathstring = ""
@@ -191,7 +195,7 @@ def processAutotraceSVG(
                 + """ fill="none" stroke="#000000" stroke-width="0.777"/>"""
                 + "\n"
             )
-        f.write("</svg>\n")
+        f.write("</g></svg>\n")
     return new_new_paths
 
 

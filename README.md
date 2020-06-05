@@ -61,6 +61,7 @@ After it runs it should create a folder `image.jpg.drawbot`. In that folder ther
 convert -size 2000x1125 xc:white white.png
 convert white.png -fill black -pointsize 100 -gravity northwest -annotate +50+50 "Some cool message\non the left side\n\n:)\n" -annotate +1050+300 "Some cool message\non the right side" test.png
 python3 img2gcode.py --simplify 5 --threshold 80 --file test.png --animate --centerline
+python3 img2gcode.py --autotrace --file test.png  --animate --threshold 80 --simplify 1
 ```
 
 Using autotrace:
