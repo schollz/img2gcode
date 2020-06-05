@@ -63,11 +63,22 @@ convert white.png -fill black -pointsize 100 -gravity northwest -annotate +50+50
 python3 img2gcode.py --simplify 5 --threshold 80 --file test.png --animate --centerline
 ```
 
+Using autotrace:
+
+```bash
+convert -size 2000x1125 xc:white white.png
+convert white.png -fill black -pointsize 100 -gravity northwest -annotate +50+50 "Some cool message\non the left side\n\n:)\n" -annotate +1050+300 "Some cool message\non the right side" test.png
+convert test.png -rotate 90 test2.tga
+autotrace -output-file test2.svg --output-format svg --centerline test2.tga
+cat test2.svg | grep "svg\|000000\|xml" > test3.svg
+python3 img2gcode.py --autotrace --file test3.svg
+```
+
 Using autotrace
 
 ```
-convert test.png test.tga
-autotrace -output-file test2.svg --output-format svg --centerline test.tga
+onvert c2.jpg -resize 2000x1125 -background White -gravity center -extent 2000x1125 -threshold 90% -rotate 90 test2.tga
+autotrace -output-file test2.svg --output-format svg --centerline test2.tga
 ```
 
 ## License
