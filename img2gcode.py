@@ -337,6 +337,16 @@ def processSVG(
     return new_new_paths
 
 
+
+def rgb(minimum, maximum, value):
+    minimum, maximum = float(minimum), float(maximum)
+    ratio = 2 * (value-minimum) / (maximum - minimum)
+    b = int(max(0, 255*(1 - ratio)))
+    r = int(max(0, 255*(ratio - 1)))
+    g = 255 - b - r
+    return (r, g, b)
+
+
 def animateProcess(new_paths, bounds, fname="out.gif"):
     images = []
     color_1 = (0, 0, 0)
@@ -353,7 +363,7 @@ def animateProcess(new_paths, bounds, fname="out.gif"):
         gifmod = int(total_paths / 100)
 
     i = 0
-    for _, path in enumerate(new_paths):
+    for j, path in enumerate(new_paths):
         for _, ele in enumerate(path):
             x1 = np.real(ele.start) - bounds[0]
             y1 = np.imag(ele.start) - bounds[2]
