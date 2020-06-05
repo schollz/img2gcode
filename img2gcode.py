@@ -262,7 +262,7 @@ def animateProcess(new_new_paths_flat, bounds, fname="out.gif"):
             pass # change color
         draw = ImageDraw.Draw(im)
         draw.line((x1,y1,x2,y2), fill=color_1,width=6)
-        if i%gifmod == 0:
+        if i%gifmod == 0 or i >= len(new_new_paths_flat)-1:
             im0 = im.copy()
             images.append(im0)
         last_point = [x2, y2]
