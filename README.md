@@ -63,6 +63,13 @@ convert white.png -fill black -pointsize 100 -gravity northwest -annotate +50+50
 python3 img2gcode.py --simplify 5 --threshold 80 --file test.png --animate --centerline
 ```
 
+Using autotrace
+
+```
+convert test.png test.tga
+autotrace -output-file test2.svg --output-format svg --centerline test.tga
+```
+
 ## License
 
 MIT
