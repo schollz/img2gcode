@@ -77,8 +77,23 @@ python3 img2gcode.py --autotrace --file test3.svg
 Using autotrace
 
 ```
-onvert c2.jpg -resize 2000x1125 -background White -gravity center -extent 2000x1125 -threshold 90% -rotate 90 test2.tga
+convert c2.jpg -resize 2000x1125 -background White -gravity center -extent 2000x1125 -threshold 90% -rotate 90 test2.tga
 autotrace -output-file test2.svg --output-format svg --centerline test2.tga
+```
+
+## Installing autotrace
+
+```bash
+sudo apt update
+sudo apt install intltool imagemagick libmagickcore-dev pstoedit libpstoedit-dev autopoint
+
+git clone https://github.com/autotrace/autotrace.git
+cd autotrace
+
+./autogen.sh
+LD_LIBRARY_PATH=/usr/local/lib ./configure --prefix=/usr
+make
+sudo make install
 ```
 
 ## License
