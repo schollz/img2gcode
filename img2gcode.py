@@ -85,8 +85,52 @@ def cubic_bezier_sample(start, control1, control2, end):
     return lambda t: np.array([t ** 3, t ** 2, t, 1]).dot(partial)
 
 
+def write_paths_to_gcode(fname, paths):
+    gcodestring = "G01 Z1000"
+    for i, path in enumerate(paths):
+        coords = []
+        for j, ele in enumerate(path):
+            x1 = np.real(ele.start)
+            y1 = np.imag(ele.start)
+            x2 = np.real(ele.end)
+            y2 = np.imag(ele.end)
+            if j == 0:
+                gcodestring += f"\nG01 X{int(x1)} Y{int(y1)} Z1000"
+                gcodestring += f"\nG01 Z0"
+            else:
+                gcodestring += f"\nG01 X{int(x1)} Y{int(y1)} Z0"
+
+        gcodestring += "\nG01 Z1000"
+    with open(fname, "w") as f:
+        f.write(gcodestring.strip())
+
+def write_paths_to_svg(fname, paths, bounds):
+    with open(fname, "w") as f:
+        f.write(
+            f'<?xml version="1.0" standalone="yes"?><svg width="{bounds[1]-bounds[0]}" height="{bounds[3]-bounds[2]}"><g transform="translate({-bounds[0]} {-bounds[2]})">'
+        )
+        for i, path in enumerate(paths):
+            pathstring = ""
+            for j, ele in enumerate(path):
+                x1 = np.real(ele.start)
+                y1 = np.imag(ele.start)
+                x2 = np.real(ele.end)
+                y2 = np.imag(ele.end)
+                if j == 0:
+                    pathstring += f"M {int(x1)},{int(y1)} "
+
+                if j > 0 or len(path) == 1:
+                    pathstring += f"L {int(x2)},{int(y2)} "
+            f.write(
+                f'<path d="{pathstring}"'
+                + """ fill="none" stroke="#000000" stroke-width="0.777"/>"""
+                + "\n"
+            )
+        f.write("</g></svg>\n")
+
+
 def processAutotraceSVG(
-    fnamein, fnameout, drawing_area=[650, 1775, -1000, 1000],simplifylevel=1
+    fnamein, fnameout, drawing_area=[650, 1775, -1000, 1000], simplifylevel=1
 ):
     paths, attributes, svg_attributes = svg2paths2(fnamein)
     log.info("have {} paths", len(paths))
@@ -96,7 +140,7 @@ def processAutotraceSVG(
     new_paths = []
     for ii, path in enumerate(attributes):
         new_path = []
-        if '000000' not in attributes[ii]['style']:
+        if "000000" not in attributes[ii]["style"]:
             continue
         path = parse_path(attributes[ii]["d"])
         for jj, ele in enumerate(path):
@@ -145,8 +189,8 @@ def processAutotraceSVG(
             x2 = round(np.real(ele.end) + drawing_area[0])
             y2 = round(np.imag(ele.end) + drawing_area[2])
             if j == 0:
-                coords.append([x1,y1])
-            coords.append([x2,y2])
+                coords.append([x1, y1])
+            coords.append([x2, y2])
 
         simplified = coords
         simplified = simplify_coords(simplified, simplifylevel)
@@ -171,31 +215,8 @@ def processAutotraceSVG(
     log.debug(f"have {num_coords} coordinates")
     log.debug(f"have {num_coords_simplified} coordinates after simplifying")
 
-    with open("final.svg", "w") as f:
-        f.write(
-            """<?xml version="1.0" standalone="yes"?>
-<svg width="1125" height="2000">
-<g transform="translate(-650 1000)">
-"""
-        )
-        for i, path in enumerate(new_new_paths):
-            pathstring = ""
-            for j, ele in enumerate(path):
-                x1 = np.real(ele.start)
-                y1 = np.imag(ele.start)
-                x2 = np.real(ele.end)
-                y2 = np.imag(ele.end)
-                if j == 0:
-                    pathstring += f"M {int(x1)},{int(y1)} "
-
-                if j > 0 or len(path) == 1:
-                    pathstring += f"L {int(x2)},{int(y2)} "
-            f.write(
-                f'<path d="{pathstring}"'
-                + """ fill="none" stroke="#000000" stroke-width="0.777"/>"""
-                + "\n"
-            )
-        f.write("</g></svg>\n")
+    write_paths_to_svg("final.svg", new_new_paths, drawing_area)
+    write_paths_to_gcode("image.gc",new_new_paths)
     return new_new_paths
 
 
@@ -212,37 +233,14 @@ def processSVG(
     log.debug("converting beziers to lines")
 
     new_paths = []
-    bounds = [1000000, -100000, 100000, -1000000]
     for ii, path in enumerate(attributes):
         new_path = []
-        point_start = []
-        point_end = []
         path = parse_path(attributes[ii]["d"])
         for jj, ele in enumerate(path):
             x1 = np.real(ele.start)
             y1 = np.imag(ele.start)
             x2 = np.real(ele.end)
             y2 = np.imag(ele.end)
-            if jj == 0:
-                point_start = [x1, y1]
-            point_end = [x2, y2]
-            if ii == 0:
-                if x1 < bounds[0]:
-                    bounds[0] = x1
-                if x2 < bounds[0]:
-                    bounds[0] = x2
-                if x1 > bounds[1]:
-                    bounds[1] = x1
-                if x2 > bounds[1]:
-                    bounds[1] = x2
-                if y1 < bounds[2]:
-                    bounds[2] = y1
-                if y2 < bounds[2]:
-                    bounds[2] = y2
-                if y1 > bounds[3]:
-                    bounds[3] = y1
-                if y2 > bounds[3]:
-                    bounds[3] = y2
             if "CubicBezier" in str(ele):
                 n_segments = 2
                 # get curve segment generator
@@ -263,20 +261,18 @@ def processSVG(
             elif "Line" in str(ele):
                 new_path.append(Line(ele.start, ele.end))
             elif "Move" in str(ele):
-                point_start = [x1, y1]
+                if len(new_path) > 0:
+                    new_paths.append(new_path)
+                new_path = []
             elif "Close" in str(ele):
-                # if dist2(point_start,point_end)<1:
-                #     new_path = new_path[:int(len(new_path)/1.5)]
-                new_paths.append(new_path)
+                if len(new_path) > 0:
+                    new_paths.append(new_path)
                 new_path = []
 
         if len(new_path) > 0:
-            # if dist2(point_start,point_end)<1:
-            #     new_path = new_path[:int(len(new_path)/1.5)]
             new_paths.append(new_path)
 
     # transform points
-    print(bounds)
     bounds = [
         0.0,
         10 * (drawing_area[1] - drawing_area[0]),
@@ -328,58 +324,17 @@ def processSVG(
             new_paths_flat.append(path)
             # new_paths[j][i] = Line(complex(x1,y1),complex(x2,y2))
         new_new_paths.append(new_path)
-    bounds = drawing_area
 
     log.debug(f"have {num_coords} coordinates")
     log.debug(f"have {num_coords_simplified} coordinates after simplifying")
-    with open("test.svg", "w") as f:
-        f.write(
-            """<?xml version="1.0" standalone="yes"?>
-<svg width="1125" height="2000">
-"""
-        )
-        for i, path in enumerate(new_new_paths):
-            pathstring = ""
-            for j, ele in enumerate(path):
-                x1 = np.real(ele.start)
-                y1 = np.imag(ele.start)
-                x2 = np.real(ele.end)
-                y2 = np.imag(ele.end)
-                if j == 0:
-                    pathstring += f"M {int(x1)},{int(y1)} "
+    write_paths_to_svg(fnameout, new_new_paths, drawing_area)
 
-                if j > 0 or len(path) == 1:
-                    pathstring += f"L {int(x2)},{int(y2)} "
-            f.write(
-                f'<path d="{pathstring}"'
-                + """ fill="none" stroke="#000000" stroke-width="0.777"/>"""
-                + "\n"
-            )
-        f.write("</svg>\n")
-    wsvg(new_paths_flat, filename=fnameout)
     log.debug("wrote image to {}", fnameout)
 
-    log.info(bounds)
+    write_paths_to_gcode("image.gc",new_new_paths)
 
-    gcodestring = "G01 Z1000"
-    for i, path in enumerate(new_new_paths):
-        coords = []
-        for j, ele in enumerate(path):
-            x1 = np.real(ele.start)
-            y1 = np.imag(ele.start)
-            x2 = np.real(ele.end)
-            y2 = np.imag(ele.end)
-            if j == 0:
-                gcodestring += f"\nG01 X{int(x1)} Y{int(y1)} Z1000"
-                gcodestring += f"\nG01 Z0"
-            else:
-                gcodestring += f"\nG01 X{int(x1)} Y{int(y1)} Z0"
 
-        gcodestring += "\nG01 Z1000"
-    with open("image.gc", "w") as f:
-        f.write(gcodestring.strip())
-
-    return new_new_paths, bounds
+    return new_new_paths
 
 
 def animateProcess(new_paths, bounds, fname="out.gif"):
@@ -394,8 +349,8 @@ def animateProcess(new_paths, bounds, fname="out.gif"):
     for _, path in enumerate(new_paths):
         for _, ele in enumerate(path):
             total_paths += 1
-    if total_paths > 50:
-        gifmod = int(total_paths / 50)
+    if total_paths > 100:
+        gifmod = int(total_paths / 100)
 
     i = 0
     for _, path in enumerate(new_paths):
@@ -420,7 +375,6 @@ def animateProcess(new_paths, bounds, fname="out.gif"):
         duration=1,
         loop=2,
     )
-
 
 
 @click.command()
@@ -537,7 +491,7 @@ def run(
             subprocess.run(cmd.split())
             os.remove("thresholded.bmp")
 
-        new_new_paths_flat, bounds = processSVG(
+        new_new_paths_flat = processSVG(
             "potrace.svg",
             "final.svg",
             simplifylevel=simplify,
