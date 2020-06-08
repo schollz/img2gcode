@@ -104,6 +104,85 @@ def write_paths_to_gcode(fname, paths):
     with open(fname, "w") as f:
         f.write(gcodestring.strip())
 
+
+def merge_similar(paths,threshold_dist):
+    # merge similar paths
+    final_paths = []
+    for i, coords in enumerate(paths):
+        if i ==0:
+            final_paths.append(coords)
+            continue 
+        d = dist2(coords[0],final_paths[len(final_paths)-1][len(final_paths[len(final_paths)-1])-1])
+        print(final_paths[len(final_paths)-1][len(final_paths[len(final_paths)-1])-1])
+        print(coords[0])
+        print(d)
+        if d < threshold_dist:
+            final_paths[len(final_paths)-1] += coords
+        else:
+            final_paths.append(coords)
+
+    return final_paths
+
+def minimize_moves(paths):
+    # greedy algorithm
+    # for each path, find which end is closest to any other line
+    # and add to either the beginning or the end of the path
+    onepath = []
+    for i, coords in enumerate(paths):
+        if len(onepath) == len(paths):
+            break
+        if i == 0:
+            onepath.append(coords)
+
+        log.debug(onepath)
+
+        cs = onepath[0][0]
+        ce = onepath[len(onepath) - 1][len(onepath[len(onepath) - 1]) - 1]
+
+        minDist = 1000000
+        onepathnext = onepath.copy()
+        for j, coords2 in enumerate(paths):
+            if j <= i:
+                continue
+            cs2 = coords2[0]
+            ce2 = coords2[len(coords2) - 1]
+            d = dist2(cs2, cs)
+            if d < minDist:
+                minDist = d
+                onepathnext = onepath.copy()
+                coords2.reverse() 
+                onepathnext = [coords2] + onepathnext
+
+            d = dist2(ce,cs2)
+            if d < minDist:
+                minDist = d
+                onepathnext = onepath.copy()
+                onepathnext = onepathnext + [coords2]
+
+            d = dist2(ce, ce2)
+            if d < minDist:
+                minDist = d
+                onepathnext = onepath.copy()
+                coords2.reverse()
+                onepathnext = onepathnext + [coords2]
+                
+            d = dist2(cs, ce2)
+            if d < minDist:
+                minDist = d
+                onepathnext = onepath.copy()
+                onepathnext =[coords2] + onepathnext 
+
+        onepath = onepathnext.copy()
+
+    return onepath
+
+# coords = [[[2, 3], [1, 2]], [[2, 3.5], [3, 4]], [[5, 6], [7, 8]]]
+# coords = minimize_moves(coords)
+# print(coords)
+# print(merge_similar(coords,5))
+# sys.exit(1)
+
+
 def write_paths_to_svg(fname, paths, bounds):
     with open(fname, "w") as f:
         f.write(
@@ -181,6 +260,7 @@ def processAutotraceSVG(
     num_coords = 0
     num_coords_simplified = 0
     new_new_paths = []
+    coords_path = []
     for i, path in enumerate(new_paths):
         coords = []
         for j, ele in enumerate(path):
@@ -191,7 +271,13 @@ def processAutotraceSVG(
             if j == 0:
                 coords.append([x1, y1])
             coords.append([x2, y2])
+        if len(coords) > 0:
+            coords_path.append(coords)
 
+    coords_path = minimize_moves(coords_path)
+    coords_path = merge_similar(coords_path,16)
+
+    for _, coords in enumerate(coords_path):
         simplified = coords
         simplified = simplify_coords(simplified, simplifylevel)
 
@@ -216,7 +302,7 @@ def processAutotraceSVG(
     log.debug(f"have {num_coords_simplified} coordinates after simplifying")
 
     write_paths_to_svg("final.svg", new_new_paths, drawing_area)
-    write_paths_to_gcode("image.gc",new_new_paths)
+    write_paths_to_gcode("image.gc", new_new_paths)
     return new_new_paths
 
 
@@ -331,18 +417,16 @@ def processSVG(
 
     log.debug("wrote image to {}", fnameout)
 
-    write_paths_to_gcode("image.gc",new_new_paths)
-
+    write_paths_to_gcode("image.gc", new_new_paths)
 
     return new_new_paths
 
 
-
 def rgb(minimum, maximum, value):
     minimum, maximum = float(minimum), float(maximum)
-    ratio = 2 * (value-minimum) / (maximum - minimum)
-    b = int(max(0, 255*(1 - ratio)))
-    r = int(max(0, 255*(ratio - 1)))
+    ratio = 2 * (value - minimum) / (maximum - minimum)
+    b = int(max(0, 255 * (1 - ratio)))
+    r = int(max(0, 255 * (ratio - 1)))
     g = 255 - b - r
     return (r, g, b)
 
