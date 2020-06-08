@@ -309,7 +309,7 @@ def processAutotraceSVG(
     # coords_path = minimize_moves(coords_path)
     # coords_path = merge_similar(coords_path, 100)
     coords_path = minimize_moves(coords_path)
-    coords_path = merge_similar(coords_path, 50**2)
+    coords_path = merge_similar(coords_path, 50 ** 2)
 
     for _, coords in enumerate(coords_path):
         simplified = coords
