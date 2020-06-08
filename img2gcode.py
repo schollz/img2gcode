@@ -27,6 +27,7 @@ from loguru import logger as log
 import click
 from PIL import Image, ImageDraw
 
+import random
 import hashlib
 import ntpath
 import os
@@ -106,6 +107,8 @@ def write_paths_to_gcode(fname, paths):
 
 
 def merge_similar(paths, threshold_dist):
+    if len(paths) ==1:
+        return paths
     # merge similar paths
     final_paths = []
     for i, coords in enumerate(paths):
@@ -128,64 +131,77 @@ def merge_similar(paths, threshold_dist):
 
 
 def minimize_moves(paths):
+    if len(paths) <= 1:
+        return paths
     # greedy algorithm
     # for each path, find which end is closest to any other line
     # and add to either the beginning or the end of the path
-    onepath = []
-    paths_finished = {}
-    for i, coords in enumerate(paths):
-        if len(onepath) == len(paths):
-            break
-        if i == 0:
-            onepath.append(coords)
-            paths_finished[i] = {}
+    bestonepath = []
+    bestonepathscore = 29997000000
+    for i in range(30):
+        random.shuffle(paths)
 
-        cs = onepath[0][0]
-        ce = onepath[len(onepath) - 1][len(onepath[len(onepath) - 1]) - 1]
+        totaldist = 0
+        onepath = []
+        paths_finished = {}
+        for i, coords in enumerate(paths):
+            if i == 0:
+                onepath.append(coords)
+                paths_finished[i] = {}
 
-        minDist = 1000000000
-        onepathnext = onepath.copy()
-        bestpath = -1
-        for j, coords2 in enumerate(paths):
-            if j == i or j in paths_finished:
+            cs = onepath[0][0]
+            ce = onepath[len(onepath) - 1][len(onepath[len(onepath) - 1]) - 1]
+
+            minDist = 1000000000
+            onepathnext = onepath.copy()
+            bestpath = -1
+            for j, coords2 in enumerate(paths):
+                if j == i or j in paths_finished:
+                    continue
+                cs2 = coords2[0]
+                ce2 = coords2[len(coords2) - 1]
+                d = dist2(cs2, cs)
+                if d < minDist:
+                    minDist = d
+                    bestpath = j
+                    coords2copy = coords2.copy()
+                    coords2copy.reverse()
+                    onepathnext = onepath.copy()
+                    onepathnext = [coords2copy] + onepathnext
+
+                d = dist2(ce, cs2)
+                if d < minDist:
+                    minDist = d
+                    bestpath = j
+                    onepathnext = onepath.copy()
+                    onepathnext = onepathnext + [coords2.copy()]
+
+                d = dist2(ce, ce2)
+                if d < minDist:
+                    minDist = d
+                    bestpath = j
+                    onepathnext = onepath.copy()
+                    coords2copy = coords2.copy()
+                    coords2copy.reverse()
+                    onepathnext = onepathnext + [coords2copy]
+
+                d = dist2(cs, ce2)
+                if d < minDist:
+                    minDist = d
+                    bestpath = j
+                    onepathnext = onepath.copy()
+                    onepathnext = [coords2.copy()] + onepathnext
+
+            onepath = onepathnext.copy()
+            paths_finished[bestpath] = {}
+
+        for i, path in enumerate(onepath):
+            if i == 0:
                 continue
-            cs2 = coords2[0]
-            ce2 = coords2[len(coords2) - 1]
-            d = dist2(cs2, cs)
-            if d < minDist:
-                minDist = d
-                bestpath = j
-                coords2copy = coords2.copy()
-                coords2copy.reverse()
-                onepathnext = onepath.copy()
-                onepathnext = [coords2copy] + onepathnext
-
-            d = dist2(ce, cs2)
-            if d < minDist:
-                minDist = d
-                bestpath = j
-                onepathnext = onepath.copy()
-                onepathnext = onepathnext + [coords2.copy()]
-
-            d = dist2(ce, ce2)
-            if d < minDist:
-                minDist = d
-                bestpath = j
-                onepathnext = onepath.copy()
-                coords2copy = coords2.copy()
-                coords2copy.reverse()
-                onepathnext = onepathnext + [coords2copy]
-
-            d = dist2(cs, ce2)
-            if d < minDist:
-                minDist = d
-                bestpath = j
-                onepathnext = onepath.copy()
-                onepathnext = [coords2.copy()] + onepathnext
-
-        onepath = onepathnext.copy()
-        paths_finished[bestpath] = {}
-
+            totaldist += dist2(onepath[i-1][len(onepath[i-1])-1],onepath[i][0])
+        if totaldist < bestonepathscore and totaldist > 0:
+            bestonepathscore = totaldist
+            bestonepath = onepath.copy()
     # maxDist = dist2(
     #     onepath[0][0], onepath[len(onepath) - 1][len(onepath[len(onepath) - 1]) - 1]
     # )
@@ -201,8 +217,15 @@ def minimize_moves(paths):
     # if minCut > 0:
     #     log.debug("splitting at {}",minCut)
     #     onepath = onepath[minCut:] + onepath[:minCut]
-    return onepath
+    return bestonepath
 
+
+
+# coords = [[[2, 3], [1, 2]], [[2, 3.5], [3, 4]], [[5, 6], [7, 8]]]
+# coords = minimize_moves(coords)
+# print(coords)
+# print(merge_similar(coords,5))
+# sys.exit(1)
 
 # coords = [[[2, 3], [1, 2]], [[2, 3.5], [3, 4]], [[5, 6], [7, 8]]]
 # coords = minimize_moves(coords)
@@ -311,7 +334,9 @@ def processAutotraceSVG(
 
     # coords_path = minimize_moves(coords_path)
     # coords_path = merge_similar(coords_path, 100)
+    log.debug("coords_path length: {}",len(coords_path))
     coords_path = minimize_moves(coords_path)
+    log.debug("coords_path length: {}",len(coords_path))
     if mergeSize > 1:
         coords_path = merge_similar(coords_path, mergeSize ** 2)
 
@@ -332,6 +357,7 @@ def processAutotraceSVG(
                 complex(simplified[i][0], simplified[i][1]),
             )
             new_path.append(path)
+        log.debug("path length: {}",len(new_path))
         if len(new_path) > 0 and len(new_path) >= minPathLength:
             new_new_paths.append(new_path)
 
