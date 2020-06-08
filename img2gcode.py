@@ -131,6 +131,7 @@ def merge_similar(paths, threshold_dist):
 
 
 def minimize_moves(paths):
+    log.debug("minimizing moves")
     if len(paths) <= 1:
         return paths
     # greedy algorithm
@@ -138,7 +139,7 @@ def minimize_moves(paths):
     # and add to either the beginning or the end of the path
     bestonepath = []
     bestonepathscore = 29997000000
-    for i in range(1000):
+    for i in range(10000):
         random.shuffle(paths)
 
         totaldist = 0
@@ -550,7 +551,7 @@ def animateProcess(new_paths, bounds, fname="out.gif"):
 @click.option("--minpath", default=0, help="min path length")
 @click.option("--merge", default=0, help="mege points closer than")
 @click.option("--prune", default=7, help="amount of pruning of small things")
-@click.option("--simplify", default=5, help="simplify level")
+@click.option("--simplify", default=5.1, help="simplify level",type=float)
 @click.option("--threshold", default=60, help="percent threshold (0-100)")
 def run(
     folder,
