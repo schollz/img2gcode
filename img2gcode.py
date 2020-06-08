@@ -113,9 +113,6 @@ def merge_similar(paths,threshold_dist):
             final_paths.append(coords)
             continue 
         d = dist2(coords[0],final_paths[len(final_paths)-1][len(final_paths[len(final_paths)-1])-1])
-        print(final_paths[len(final_paths)-1][len(final_paths[len(final_paths)-1])-1])
-        print(coords[0])
-        print(d)
         if d < threshold_dist:
             final_paths[len(final_paths)-1] += coords
         else:
@@ -135,8 +132,6 @@ def minimize_moves(paths):
         if i == 0:
             onepath.append(coords)
 
-        log.debug(onepath)
-
         cs = onepath[0][0]
         ce = onepath[len(onepath) - 1][len(onepath[len(onepath) - 1]) - 1]
 
@@ -151,9 +146,10 @@ def minimize_moves(paths):
             d = dist2(cs2, cs)
             if d < minDist:
                 minDist = d
+                coords2copy = coords2.copy()
+                coords2copy.reverse() 
                 onepathnext = onepath.copy()
-                coords2.reverse() 
-                onepathnext = [coords2] + onepathnext
+                onepathnext = [coords2copy] + onepathnext
                 bestpath = j
 
             d = dist2(ce,cs2)
@@ -161,26 +157,39 @@ def minimize_moves(paths):
                 minDist = d
                 onepathnext = onepath.copy()
                 bestpath = j
-                onepathnext = onepathnext + [coords2]
+                onepathnext = onepathnext + [coords2.copy()]
 
             d = dist2(ce, ce2)
             if d < minDist:
                 minDist = d
                 onepathnext = onepath.copy()
-                coords2.reverse()
-                onepathnext = onepathnext + [coords2]
+                coords2copy = coords2.copy()
+                coords2copy.reverse() 
+                onepathnext = onepathnext + [coords2copy]
                 bestpath = j
                 
             d = dist2(cs, ce2)
             if d < minDist:
                 minDist = d
                 onepathnext = onepath.copy()
-                onepathnext =[coords2] + onepathnext 
+                onepathnext =[coords2.copy()] + onepathnext 
                 bestpath = j
 
         onepath = onepathnext.copy()
         paths_finished[bestpath] = {}
 
+    maxDist = dist2(onepath[0][0],onepath[len(onepath)-1][len(onepath[len(onepath)-1])-1])
+    minCut = 0
+    for i,path in enumerate(onepath):
+        if i == 0:
+            continue
+        point1 = onepath[i-1][len(onepath[i-1])-1]
+        point2 = onepath[i][0]
+        d = dist2(point1,point2)
+        if d > maxDist:
+            minCut = i 
+    if minCut > 0:
+        onepath = onepath[minCut:] + onepath[:minCut]
     return onepath
 
 # coords = [[[2, 3], [1, 2]], [[2, 3.5], [3, 4]], [[5, 6], [7, 8]]]
@@ -278,15 +287,17 @@ def processAutotraceSVG(
             if j == 0:
                 coords.append([x1, y1])
             coords.append([x2, y2])
-        if len(coords) > 0:
+        if len(coords) > 2:
             coords_path.append(coords)
 
     coords_path = minimize_moves(coords_path)
-    coords_path = merge_similar(coords_path,16)
+    coords_path = merge_similar(coords_path,100)
+
 
     for _, coords in enumerate(coords_path):
         simplified = coords
-        simplified = simplify_coords(simplified, simplifylevel)
+        if simplifylevel > 1:
+            simplified = simplify_coords(simplified, simplifylevel)
 
         num_coords += len(coords)
         num_coords_simplified += len(simplified)
