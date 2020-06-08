@@ -107,7 +107,7 @@ def write_paths_to_gcode(fname, paths):
 
 
 def merge_similar(paths, threshold_dist):
-    if len(paths) ==1:
+    if len(paths) <= 1:
         return paths
     # merge similar paths
     final_paths = []
