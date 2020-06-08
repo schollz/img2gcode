@@ -243,6 +243,8 @@ def processAutotraceSVG(
     simplifylevel=1,
     minPathLength=1,
 ):
+    if minPathLength < 1:
+        minPathLength = 1
     paths, attributes, svg_attributes = svg2paths2(fnamein)
     log.info("have {} paths", len(paths))
 
@@ -306,6 +308,7 @@ def processAutotraceSVG(
         if len(coords) >= minPathLength:
             coords_path.append(coords)
 
+
     # coords_path = minimize_moves(coords_path)
     # coords_path = merge_similar(coords_path, 100)
     coords_path = minimize_moves(coords_path)
@@ -328,7 +331,7 @@ def processAutotraceSVG(
                 complex(simplified[i][0], simplified[i][1]),
             )
             new_path.append(path)
-        if len(new_path) > 0:
+        if len(new_path) > 0 and len(new_path) >= minPathLength:
             new_new_paths.append(new_path)
 
     log.debug(f"now have {len(new_new_paths)} lines")
@@ -501,7 +504,7 @@ def animateProcess(new_paths, bounds, fname="out.gif"):
         append_images=images[1:],
         optimize=False,
         duration=1,
-        loop=2,
+        loop=1,
     )
 
 
@@ -517,6 +520,7 @@ def animateProcess(new_paths, bounds, fname="out.gif"):
 @click.option("--miny", default=-1000, help="minimum y")
 @click.option("--maxy", default=1000, help="maximum y")
 @click.option("--maxy", default=1000, help="maximum y")
+@click.option("--minpath", default=0, help="min path length")
 @click.option("--prune", default=7, help="amount of pruning of small things")
 @click.option("--simplify", default=5, help="simplify level")
 @click.option("--threshold", default=60, help="percent threshold (0-100)")
@@ -534,6 +538,7 @@ def run(
     miny,
     maxy,
     threshold,
+    minpath,
 ):
     imconvert = "convert"
     if os.name == "nt":
@@ -578,7 +583,7 @@ def run(
         subprocess.run(cmd.split())
 
         new_new_paths_flat = processAutotraceSVG(
-            "potrace.svg", "final.svg", drawing_area=bounds, simplifylevel=simplify
+            "potrace.svg", "final.svg", drawing_area=bounds, simplifylevel=simplify, minPathLength=minpath,
         )
     elif not os.path.exists("potrace.svg") or overwrite:
         if skeleton:
