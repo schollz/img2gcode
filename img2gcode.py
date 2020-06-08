@@ -121,7 +121,6 @@ def merge_similar(paths, threshold_dist):
                 len(final_paths[len(final_paths) - 1]) - 1
             ],
         )
-        log.debug(d)
         if d < threshold_dist:
             final_paths[len(final_paths) - 1] += coords
         else:
@@ -131,7 +130,8 @@ def merge_similar(paths, threshold_dist):
 
 
 def minimize_moves(paths):
-    log.debug("minimizing moves")
+    tries = int(10000 / len(paths))
+    log.debug("minimizing moves for {} tries", tries)
     if len(paths) <= 1:
         return paths
     # greedy algorithm
@@ -139,7 +139,7 @@ def minimize_moves(paths):
     # and add to either the beginning or the end of the path
     bestonepath = []
     bestonepathscore = 29997000000
-    for i in range(10000):
+    for i in range(tries):
         random.shuffle(paths)
 
         totaldist = 0
@@ -199,7 +199,7 @@ def minimize_moves(paths):
         for i, path in enumerate(onepath):
             if i == 0:
                 continue
-            totaldist += dist2(onepath[i-1][len(onepath[i-1])-1],onepath[i][0])
+            totaldist += dist2(onepath[i - 1][len(onepath[i - 1]) - 1], onepath[i][0])
         if totaldist < bestonepathscore and totaldist > 0:
             bestonepathscore = totaldist
             bestonepath = onepath.copy()
@@ -219,7 +219,6 @@ def minimize_moves(paths):
     #     log.debug("splitting at {}",minCut)
     #     onepath = onepath[minCut:] + onepath[:minCut]
     return bestonepath
-
 
 
 # coords = [[[2, 3], [1, 2]], [[2, 3.5], [3, 4]], [[5, 6], [7, 8]]]
@@ -335,9 +334,9 @@ def processAutotraceSVG(
 
     # coords_path = minimize_moves(coords_path)
     # coords_path = merge_similar(coords_path, 100)
-    log.debug("coords_path length: {}",len(coords_path))
+    log.debug("coords_path length: {}", len(coords_path))
     coords_path = minimize_moves(coords_path)
-    log.debug("coords_path length: {}",len(coords_path))
+    log.debug("coords_path length: {}", len(coords_path))
     if mergeSize > 1:
         coords_path = merge_similar(coords_path, mergeSize ** 2)
 
@@ -358,7 +357,6 @@ def processAutotraceSVG(
                 complex(simplified[i][0], simplified[i][1]),
             )
             new_path.append(path)
-        log.debug("path length: {}",len(new_path))
         if len(new_path) > 0 and len(new_path) >= minPathLength:
             new_new_paths.append(new_path)
 
@@ -551,7 +549,7 @@ def animateProcess(new_paths, bounds, fname="out.gif"):
 @click.option("--minpath", default=0, help="min path length")
 @click.option("--merge", default=0, help="mege points closer than")
 @click.option("--prune", default=7, help="amount of pruning of small things")
-@click.option("--simplify", default=5.1, help="simplify level",type=float)
+@click.option("--simplify", default=5.1, help="simplify level", type=float)
 @click.option("--threshold", default=60, help="percent threshold (0-100)")
 def run(
     folder,
@@ -601,48 +599,22 @@ def run(
         cmd = f"{imconvert} {file} -resize {width}x{height} -background White -gravity center -extent {width}x{height} -threshold {threshold}%% -rotate 90 thresholded.png"
         log.debug(cmd)
         subprocess.run(cmd.split())
-
-        try:
-            cmd = f"{imconvert} thresholded.png 1.tga"
-            log.debug(cmd)
-            subprocess.run(cmd.split())
-            cmd = (
-                f"autotrace -output-file potrace.svg --output-format svg --centerline 1.tga"
-            )
-            log.debug(cmd)
-            subprocess.run(cmd.split())
-            new_new_paths_flat = processAutotraceSVG(
-                "potrace.svg",
-                "final.svg",
-                drawing_area=bounds,
-                simplifylevel=simplify,
-                minPathLength=minpath,
-                mergeSize=merge,
-            )
-        except:
-            cmd = f"{imconvert} thresholded.png 1.jpg"
-            log.debug(cmd)
-            subprocess.run(cmd.split())
-            cmd = f"{imconvert} 1.jpg 1.png"
-            log.debug(cmd)
-            subprocess.run(cmd.split())
-            cmd = f"{imconvert} 1.png 1.tga"
-            log.debug(cmd)
-            subprocess.run(cmd.split())
-            cmd = (
-                f"autotrace -output-file potrace.svg --output-format svg --centerline 1.tga"
-            )
-            log.debug(cmd)
-            subprocess.run(cmd.split())
-            new_new_paths_flat = processAutotraceSVG(
-                "potrace.svg",
-                "final.svg",
-                drawing_area=bounds,
-                simplifylevel=simplify,
-                minPathLength=minpath,
-                mergeSize=merge,
-            )
-
+        cmd = f"{imconvert} thresholded.png 1.tga"
+        log.debug(cmd)
+        subprocess.run(cmd.split())
+        cmd = (
+            f"autotrace -output-file potrace.svg --output-format svg --centerline 1.tga"
+        )
+        log.debug(cmd)
+        subprocess.run(cmd.split())
+        new_new_paths_flat = processAutotraceSVG(
+            "potrace.svg",
+            "final.svg",
+            drawing_area=bounds,
+            simplifylevel=simplify,
+            minPathLength=minpath,
+            mergeSize=merge,
+        )
 
     elif not os.path.exists("potrace.svg") or overwrite:
         if skeleton:
