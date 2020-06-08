@@ -138,7 +138,7 @@ def minimize_moves(paths):
     # and add to either the beginning or the end of the path
     bestonepath = []
     bestonepathscore = 29997000000
-    for i in range(30):
+    for i in range(1000):
         random.shuffle(paths)
 
         totaldist = 0
@@ -601,24 +601,48 @@ def run(
         log.debug(cmd)
         subprocess.run(cmd.split())
 
-        cmd = f"{imconvert} thresholded.png 1.tga"
-        log.debug(cmd)
-        subprocess.run(cmd.split())
+        try:
+            cmd = f"{imconvert} thresholded.png 1.tga"
+            log.debug(cmd)
+            subprocess.run(cmd.split())
+            cmd = (
+                f"autotrace -output-file potrace.svg --output-format svg --centerline 1.tga"
+            )
+            log.debug(cmd)
+            subprocess.run(cmd.split())
+            new_new_paths_flat = processAutotraceSVG(
+                "potrace.svg",
+                "final.svg",
+                drawing_area=bounds,
+                simplifylevel=simplify,
+                minPathLength=minpath,
+                mergeSize=merge,
+            )
+        except:
+            cmd = f"{imconvert} thresholded.png 1.jpg"
+            log.debug(cmd)
+            subprocess.run(cmd.split())
+            cmd = f"{imconvert} 1.jpg 1.png"
+            log.debug(cmd)
+            subprocess.run(cmd.split())
+            cmd = f"{imconvert} 1.png 1.tga"
+            log.debug(cmd)
+            subprocess.run(cmd.split())
+            cmd = (
+                f"autotrace -output-file potrace.svg --output-format svg --centerline 1.tga"
+            )
+            log.debug(cmd)
+            subprocess.run(cmd.split())
+            new_new_paths_flat = processAutotraceSVG(
+                "potrace.svg",
+                "final.svg",
+                drawing_area=bounds,
+                simplifylevel=simplify,
+                minPathLength=minpath,
+                mergeSize=merge,
+            )
 
-        cmd = (
-            f"autotrace -output-file potrace.svg --output-format svg --centerline 1.tga"
-        )
-        log.debug(cmd)
-        subprocess.run(cmd.split())
 
-        new_new_paths_flat = processAutotraceSVG(
-            "potrace.svg",
-            "final.svg",
-            drawing_area=bounds,
-            simplifylevel=simplify,
-            minPathLength=minpath,
-            mergeSize=merge,
-        )
     elif not os.path.exists("potrace.svg") or overwrite:
         if skeleton:
             cmd = f"{imconvert} {file} -resize {width}x{height} -background White -gravity center -extent {width}x{height} -threshold {threshold}%% thresholded.png"
