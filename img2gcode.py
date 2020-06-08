@@ -152,34 +152,34 @@ def minimize_moves(paths):
             d = dist2(cs2, cs)
             if d < minDist:
                 minDist = d
+                bestpath = j
                 coords2copy = coords2.copy()
                 coords2copy.reverse()
                 onepathnext = onepath.copy()
                 onepathnext = [coords2copy] + onepathnext
-                bestpath = j
 
             d = dist2(ce, cs2)
             if d < minDist:
                 minDist = d
-                onepathnext = onepath.copy()
                 bestpath = j
+                onepathnext = onepath.copy()
                 onepathnext = onepathnext + [coords2.copy()]
 
             d = dist2(ce, ce2)
             if d < minDist:
                 minDist = d
+                bestpath = j
                 onepathnext = onepath.copy()
                 coords2copy = coords2.copy()
                 coords2copy.reverse()
                 onepathnext = onepathnext + [coords2copy]
-                bestpath = j
 
             d = dist2(cs, ce2)
             if d < minDist:
                 minDist = d
+                bestpath = j
                 onepathnext = onepath.copy()
                 onepathnext = [coords2.copy()] + onepathnext
-                bestpath = j
 
         onepath = onepathnext.copy()
         paths_finished[bestpath] = {}
