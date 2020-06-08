@@ -242,6 +242,7 @@ def processAutotraceSVG(
     drawing_area=[650, 1775, -1000, 1000],
     simplifylevel=1,
     minPathLength=1,
+    mergeSize=1,
 ):
     if minPathLength < 1:
         minPathLength = 1
@@ -308,11 +309,11 @@ def processAutotraceSVG(
         if len(coords) >= minPathLength:
             coords_path.append(coords)
 
-
     # coords_path = minimize_moves(coords_path)
     # coords_path = merge_similar(coords_path, 100)
     coords_path = minimize_moves(coords_path)
-    coords_path = merge_similar(coords_path, 50 ** 2)
+    if mergeSize > 1:
+        coords_path = merge_similar(coords_path, mergeSize ** 2)
 
     for _, coords in enumerate(coords_path):
         simplified = coords
@@ -521,6 +522,7 @@ def animateProcess(new_paths, bounds, fname="out.gif"):
 @click.option("--maxy", default=1000, help="maximum y")
 @click.option("--maxy", default=1000, help="maximum y")
 @click.option("--minpath", default=0, help="min path length")
+@click.option("--merge", default=0, help="mege points closer than")
 @click.option("--prune", default=7, help="amount of pruning of small things")
 @click.option("--simplify", default=5, help="simplify level")
 @click.option("--threshold", default=60, help="percent threshold (0-100)")
@@ -539,6 +541,7 @@ def run(
     maxy,
     threshold,
     minpath,
+    merge,
 ):
     imconvert = "convert"
     if os.name == "nt":
@@ -583,7 +586,12 @@ def run(
         subprocess.run(cmd.split())
 
         new_new_paths_flat = processAutotraceSVG(
-            "potrace.svg", "final.svg", drawing_area=bounds, simplifylevel=simplify, minPathLength=minpath,
+            "potrace.svg",
+            "final.svg",
+            drawing_area=bounds,
+            simplifylevel=simplify,
+            minPathLength=minpath,
+            mergeSize=merge,
         )
     elif not os.path.exists("potrace.svg") or overwrite:
         if skeleton:
