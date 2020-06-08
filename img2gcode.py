@@ -118,6 +118,7 @@ def merge_similar(paths, threshold_dist):
                 len(final_paths[len(final_paths) - 1]) - 1
             ],
         )
+        log.debug(d)
         if d < threshold_dist:
             final_paths[len(final_paths) - 1] += coords
         else:
@@ -137,6 +138,7 @@ def minimize_moves(paths):
             break
         if i == 0:
             onepath.append(coords)
+            paths_finished[i] = {}
 
         cs = onepath[0][0]
         ce = onepath[len(onepath) - 1][len(onepath[len(onepath) - 1]) - 1]
@@ -184,20 +186,21 @@ def minimize_moves(paths):
         onepath = onepathnext.copy()
         paths_finished[bestpath] = {}
 
-    maxDist = dist2(
-        onepath[0][0], onepath[len(onepath) - 1][len(onepath[len(onepath) - 1]) - 1]
-    )
-    minCut = 0
-    for i, path in enumerate(onepath):
-        if i == 0:
-            continue
-        point1 = onepath[i - 1][len(onepath[i - 1]) - 1]
-        point2 = onepath[i][0]
-        d = dist2(point1, point2)
-        if d > maxDist:
-            minCut = i
-    if minCut > 0:
-        onepath = onepath[minCut:] + onepath[:minCut]
+    # maxDist = dist2(
+    #     onepath[0][0], onepath[len(onepath) - 1][len(onepath[len(onepath) - 1]) - 1]
+    # )
+    # minCut = 0
+    # for i, path in enumerate(onepath):
+    #     if i == 0:
+    #         continue
+    #     point1 = onepath[i - 1][len(onepath[i - 1]) - 1]
+    #     point2 = onepath[i][0]
+    #     d = dist2(point1, point2)
+    #     if d > maxDist:
+    #         minCut = i
+    # if minCut > 0:
+    #     log.debug("splitting at {}",minCut)
+    #     onepath = onepath[minCut:] + onepath[:minCut]
     return onepath
 
 
@@ -303,8 +306,10 @@ def processAutotraceSVG(
         if len(coords) >= minPathLength:
             coords_path.append(coords)
 
+    # coords_path = minimize_moves(coords_path)
+    # coords_path = merge_similar(coords_path, 100)
     coords_path = minimize_moves(coords_path)
-    coords_path = merge_similar(coords_path, 100)
+    coords_path = merge_similar(coords_path, 50**2)
 
     for _, coords in enumerate(coords_path):
         simplified = coords
@@ -316,7 +321,6 @@ def processAutotraceSVG(
 
         new_path = []
         for i, coord in enumerate(simplified):
-
             if i == 0:
                 continue
             path = Line(
