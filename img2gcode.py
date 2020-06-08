@@ -128,6 +128,7 @@ def minimize_moves(paths):
     # for each path, find which end is closest to any other line
     # and add to either the beginning or the end of the path
     onepath = []
+    paths_finished = {}
     for i, coords in enumerate(paths):
         if len(onepath) == len(paths):
             break
@@ -139,10 +140,11 @@ def minimize_moves(paths):
         cs = onepath[0][0]
         ce = onepath[len(onepath) - 1][len(onepath[len(onepath) - 1]) - 1]
 
-        minDist = 1000000
+        minDist = 1000000000
         onepathnext = onepath.copy()
+        bestpath = -1
         for j, coords2 in enumerate(paths):
-            if j <= i:
+            if j == i or j in paths_finished:
                 continue
             cs2 = coords2[0]
             ce2 = coords2[len(coords2) - 1]
@@ -152,11 +154,13 @@ def minimize_moves(paths):
                 onepathnext = onepath.copy()
                 coords2.reverse() 
                 onepathnext = [coords2] + onepathnext
+                bestpath = j
 
             d = dist2(ce,cs2)
             if d < minDist:
                 minDist = d
                 onepathnext = onepath.copy()
+                bestpath = j
                 onepathnext = onepathnext + [coords2]
 
             d = dist2(ce, ce2)
@@ -165,14 +169,17 @@ def minimize_moves(paths):
                 onepathnext = onepath.copy()
                 coords2.reverse()
                 onepathnext = onepathnext + [coords2]
+                bestpath = j
                 
             d = dist2(cs, ce2)
             if d < minDist:
                 minDist = d
                 onepathnext = onepath.copy()
                 onepathnext =[coords2] + onepathnext 
+                bestpath = j
 
         onepath = onepathnext.copy()
+        paths_finished[bestpath] = {}
 
     return onepath
 
