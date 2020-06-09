@@ -266,6 +266,7 @@ def processAutotraceSVG(
     simplifylevel=1,
     minPathLength=1,
     mergeSize=1,
+    minimizeMoves=True,
 ):
     if minPathLength < 1:
         minPathLength = 1
@@ -334,8 +335,9 @@ def processAutotraceSVG(
 
     # coords_path = minimize_moves(coords_path)
     # coords_path = merge_similar(coords_path, 100)
-    log.debug("coords_path length: {}", len(coords_path))
-    coords_path = minimize_moves(coords_path)
+    if minimizeMoves:
+        log.debug("coords_path length: {}", len(coords_path))
+        coords_path = minimize_moves(coords_path)
     log.debug("coords_path length: {}", len(coords_path))
     if mergeSize > 1:
         coords_path = merge_similar(coords_path, mergeSize ** 2)
@@ -541,6 +543,7 @@ def animateProcess(new_paths, bounds, fname="out.gif"):
 @click.option("--overwrite/--no-overwrite", default=True)
 @click.option("--skeleton/--no-skeleton", default=False)
 @click.option("--autotrace/--no-autotrace", default=False)
+@click.option("--minimize/--no-minimize", default=True)
 @click.option("--minx", default=650, help="minimum x")
 @click.option("--maxx", default=1775, help="maximum x")
 @click.option("--miny", default=-1000, help="minimum y")
@@ -567,6 +570,7 @@ def run(
     threshold,
     minpath,
     merge,
+    minimize,
 ):
     imconvert = "convert"
     if os.name == "nt":
@@ -614,6 +618,7 @@ def run(
             simplifylevel=simplify,
             minPathLength=minpath,
             mergeSize=merge,
+            minimizeMoves=minimize,
         )
 
     elif not os.path.exists("potrace.svg") or overwrite:
