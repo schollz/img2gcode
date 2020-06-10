@@ -27,6 +27,7 @@ from loguru import logger as log
 import click
 from PIL import Image, ImageDraw
 
+import math
 import random
 import hashlib
 import ntpath
@@ -130,10 +131,35 @@ def merge_similar(paths, threshold_dist):
 
 
 def minimize_moves(paths):
-    tries = int(40000 / len(paths))
-    log.debug("minimizing moves for {} tries", tries)
     if len(paths) <= 1:
         return paths
+    endpoints = []
+    for _, coords in enumerate(paths):
+        endpoints.append(coords[0])
+        endpoints.append(coords[len(coords)-1])
+
+    paths_split = []
+    for _, coords in enumerate(paths):
+        path = []
+        for _, coord in enumerate(coords):
+            isclose = False 
+            for _, coord2 in enumerate(endpoints):
+                if dist2(coord,coord2) < 100:
+                    if len(path) > 0:
+                        paths_split.append(path)
+                    path = []
+                    break
+            path.append(coord)
+        if len(path) > 0:
+            paths_split.append(path)
+
+    log.debug(len(paths))
+    paths = paths_split.copy()
+    log.debug(len(paths))
+
+    tries = int(10000 / len(paths))
+    log.debug("minimizing moves for {} tries", tries)
+
     # greedy algorithm
     # for each path, find which end is closest to any other line
     # and add to either the beginning or the end of the path
@@ -199,7 +225,8 @@ def minimize_moves(paths):
         for i, path in enumerate(onepath):
             if i == 0:
                 continue
-            totaldist += dist2(onepath[i - 1][len(onepath[i - 1]) - 1], onepath[i][0])
+            d = dist2(onepath[i - 1][len(onepath[i - 1]) - 1], onepath[i][0])
+            totaldist += math.sqrt(d)
         if totaldist < bestonepathscore and totaldist > 0:
             bestonepathscore = totaldist
             bestonepath = onepath.copy()
