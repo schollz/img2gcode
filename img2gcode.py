@@ -130,7 +130,7 @@ def merge_similar(paths, threshold_dist):
 
 
 def minimize_moves(paths):
-    tries = int(10000 / len(paths))
+    tries = int(40000 / len(paths))
     log.debug("minimizing moves for {} tries", tries)
     if len(paths) <= 1:
         return paths
