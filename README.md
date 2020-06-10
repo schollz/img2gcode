@@ -20,10 +20,22 @@ You need the following requirements:
 - potrace
 - ffmpeg
 - imagemagick
+- autotrace
+
+
+### Windows 
 
 On Windows you can install with [scoop](https://scoop.sh/). Note that you must use `python37` to install Python because one of the libraries (simplification) on Windows is incompatible with Python3.8.
 
 	scoop install potrace ffmpeg imagemagick python37
+
+Once installed, you can install the required Python packages with pip:
+
+	python37 -m pip install click loguru numpy simplification svgpathtools svgwrite tqdm pillow svg.path
+
+You also need to download `autotrace` from [here](https://github.com/scottvr/autotrace-win64-binaries/tree/master/bin) and put it in your path.
+
+### Linux 
 
 On Linux you can install with apt:
 	
@@ -32,6 +44,22 @@ On Linux you can install with apt:
 Once installed, you can install the required Python packages with pip:
 
 	python3 -m pip install click loguru numpy simplification svgpathtools svgwrite tqdm pillow svg.path
+
+You also need to build `autotrace` since newer distributions of Ubuntu don't include it:
+
+
+```bash
+sudo apt update
+sudo apt install intltool imagemagick libmagickcore-dev pstoedit libpstoedit-dev autopoint
+
+git clone https://github.com/autotrace/autotrace.git
+cd autotrace
+
+./autogen.sh
+LD_LIBRARY_PATH=/usr/local/lib ./configure --prefix=/usr
+make
+sudo make install
+```
 
 ## Run
 
@@ -80,21 +108,6 @@ Using autotrace
 ```
 convert c2.jpg -resize 2000x1125 -background White -gravity center -extent 2000x1125 -threshold 90% -rotate 90 test2.tga
 autotrace -output-file test2.svg --output-format svg --centerline test2.tga
-```
-
-## Installing autotrace
-
-```bash
-sudo apt update
-sudo apt install intltool imagemagick libmagickcore-dev pstoedit libpstoedit-dev autopoint
-
-git clone https://github.com/autotrace/autotrace.git
-cd autotrace
-
-./autogen.sh
-LD_LIBRARY_PATH=/usr/local/lib ./configure --prefix=/usr
-make
-sudo make install
 ```
 
 ## License
