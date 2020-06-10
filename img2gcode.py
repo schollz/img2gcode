@@ -165,7 +165,7 @@ def minimize_moves(paths, junction_distance=400):
     # and add to either the beginning or the end of the path
     bestonepath = []
     bestonepathscore = 29997000000
-    for i in range(tries):
+    for i in tqdm(range(tries)):
         random.shuffle(paths)
 
         totaldist = 0
@@ -386,7 +386,9 @@ def processAutotraceSVG(
             ),
             drawing_area,
         )
-        coords_path, paths_split = minimize_moves(coords_path,junction_distance=junction_distance)
+        coords_path, paths_split = minimize_moves(
+            coords_path, junction_distance=junction_distance
+        )
         write_paths_to_svg(
             "final_unminimized_split.svg",
             coords_to_svg(
