@@ -519,7 +519,7 @@ def animateProcess(new_paths, bounds, fname="out.gif"):
             x2 = np.real(ele.end) - bounds[0]
             y2 = np.imag(ele.end) - bounds[2]
             draw = ImageDraw.Draw(im)
-            draw.line((x1, y1, x2, y2), fill=color_1, width=6)
+            draw.line((x1, y1, x2, y2), fill=color_1, width=8)
             i += 1
             if i % gifmod == 0 or i >= total_paths - 1:
                 im0 = im.copy()
@@ -530,8 +530,8 @@ def animateProcess(new_paths, bounds, fname="out.gif"):
         fname,
         save_all=True,
         append_images=images[1:],
-        optimize=False,
-        duration=1,
+        optimize=True,
+        duration=int(5000/float(len(images))),
         loop=1,
     )
 
