@@ -130,21 +130,21 @@ def merge_similar(paths, threshold_dist):
     return final_paths
 
 
-def minimize_moves(paths):
+def minimize_moves(paths, junction_distance=100):
     if len(paths) <= 1:
         return paths
     endpoints = []
     for _, coords in enumerate(paths):
         endpoints.append(coords[0])
-        endpoints.append(coords[len(coords)-1])
+        endpoints.append(coords[len(coords) - 1])
 
     paths_split = []
     for _, coords in enumerate(paths):
         path = []
         for _, coord in enumerate(coords):
-            isclose = False 
+            isclose = False
             for _, coord2 in enumerate(endpoints):
-                if dist2(coord,coord2) < 100:
+                if dist2(coord, coord2) < junction_distance:
                     if len(path) > 0:
                         paths_split.append(path)
                     path = []
@@ -157,7 +157,7 @@ def minimize_moves(paths):
     paths = paths_split.copy()
     log.debug(len(paths))
 
-    tries = int(10000 / len(paths))
+    tries = int(4000 / len(paths))
     log.debug("minimizing moves for {} tries", tries)
 
     # greedy algorithm
@@ -245,20 +245,7 @@ def minimize_moves(paths):
     # if minCut > 0:
     #     log.debug("splitting at {}",minCut)
     #     onepath = onepath[minCut:] + onepath[:minCut]
-    return bestonepath
-
-
-# coords = [[[2, 3], [1, 2]], [[2, 3.5], [3, 4]], [[5, 6], [7, 8]]]
-# coords = minimize_moves(coords)
-# print(coords)
-# print(merge_similar(coords,5))
-# sys.exit(1)
-
-# coords = [[[2, 3], [1, 2]], [[2, 3.5], [3, 4]], [[5, 6], [7, 8]]]
-# coords = minimize_moves(coords)
-# print(coords)
-# print(merge_similar(coords,5))
-# sys.exit(1)
+    return bestonepath, paths_split
 
 
 def write_paths_to_svg(fname, paths, bounds):
@@ -284,6 +271,36 @@ def write_paths_to_svg(fname, paths, bounds):
                 + "\n"
             )
         f.write("</g></svg>\n")
+
+
+def coords_to_svg(coords_path, simplifylevel=0, minPathLength=0):
+    num_coords = 0
+    num_coords_simplified = 0
+    new_new_paths = []
+    for _, coords in enumerate(coords_path):
+        simplified = coords
+        if simplifylevel > 1:
+            simplified = simplify_coords(simplified, simplifylevel)
+
+        num_coords += len(coords)
+        num_coords_simplified += len(simplified)
+
+        new_path = []
+        for i, coord in enumerate(simplified):
+            if i == 0:
+                continue
+            path = Line(
+                complex(simplified[i - 1][0], simplified[i - 1][1]),
+                complex(simplified[i][0], simplified[i][1]),
+            )
+            new_path.append(path)
+        if len(new_path) > 0 and len(new_path) >= minPathLength:
+            new_new_paths.append(new_path)
+
+    log.debug(f"now have {len(new_new_paths)} lines")
+    log.debug(f"have {num_coords} coordinates")
+    log.debug(f"have {num_coords_simplified} coordinates after simplifying")
+    return new_new_paths
 
 
 def processAutotraceSVG(
@@ -343,8 +360,7 @@ def processAutotraceSVG(
             new_paths.append(new_path)
 
     # translate to bounding area
-    num_coords = 0
-    num_coords_simplified = 0
+
     new_new_paths = []
     coords_path = []
     for i, path in enumerate(new_paths):
@@ -360,39 +376,30 @@ def processAutotraceSVG(
         if len(coords) >= minPathLength:
             coords_path.append(coords)
 
-    # coords_path = minimize_moves(coords_path)
-    # coords_path = merge_similar(coords_path, 100)
     if minimizeMoves:
         log.debug("coords_path length: {}", len(coords_path))
-        coords_path = minimize_moves(coords_path)
+        write_paths_to_svg(
+            "final_unminimized.svg",
+            coords_to_svg(
+                coords_path, simplifylevel=simplifylevel, minPathLength=minPathLength
+            ),
+            drawing_area,
+        )
+        coords_path, paths_split = minimize_moves(coords_path)
+        write_paths_to_svg(
+            "final_unminimized_split.svg",
+            coords_to_svg(
+                paths_split, simplifylevel=simplifylevel, minPathLength=minPathLength
+            ),
+            drawing_area,
+        )
     log.debug("coords_path length: {}", len(coords_path))
     if mergeSize > 1:
         coords_path = merge_similar(coords_path, mergeSize ** 2)
 
-    for _, coords in enumerate(coords_path):
-        simplified = coords
-        if simplifylevel > 1:
-            simplified = simplify_coords(simplified, simplifylevel)
-
-        num_coords += len(coords)
-        num_coords_simplified += len(simplified)
-
-        new_path = []
-        for i, coord in enumerate(simplified):
-            if i == 0:
-                continue
-            path = Line(
-                complex(simplified[i - 1][0], simplified[i - 1][1]),
-                complex(simplified[i][0], simplified[i][1]),
-            )
-            new_path.append(path)
-        if len(new_path) > 0 and len(new_path) >= minPathLength:
-            new_new_paths.append(new_path)
-
-    log.debug(f"now have {len(new_new_paths)} lines")
-    log.debug(f"have {num_coords} coordinates")
-    log.debug(f"have {num_coords_simplified} coordinates after simplifying")
-
+    new_new_paths = coords_to_svg(
+        coords_path, simplifylevel=simplifylevel, minPathLength=minPathLength
+    )
     write_paths_to_svg("final.svg", new_new_paths, drawing_area)
     write_paths_to_gcode("image.gc", new_new_paths)
     return new_new_paths
@@ -558,7 +565,7 @@ def animateProcess(new_paths, bounds, fname="out.gif"):
         save_all=True,
         append_images=images[1:],
         optimize=True,
-        duration=int(5000/float(len(images))),
+        duration=int(5000 / float(len(images))),
         loop=1,
     )
 
