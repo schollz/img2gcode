@@ -130,7 +130,7 @@ def merge_similar(paths, threshold_dist):
     return final_paths
 
 
-def minimize_moves(paths, junction_distance=100):
+def minimize_moves(paths, junction_distance=400):
     if len(paths) <= 1:
         return paths
     endpoints = []
@@ -157,7 +157,7 @@ def minimize_moves(paths, junction_distance=100):
     paths = paths_split.copy()
     log.debug(len(paths))
 
-    tries = int(4000 / len(paths))
+    tries = int(80000 / len(paths))
     log.debug("minimizing moves for {} tries", tries)
 
     # greedy algorithm
@@ -311,6 +311,7 @@ def processAutotraceSVG(
     minPathLength=1,
     mergeSize=1,
     minimizeMoves=True,
+    junction_distance=400,
 ):
     if minPathLength < 1:
         minPathLength = 1
@@ -385,7 +386,7 @@ def processAutotraceSVG(
             ),
             drawing_area,
         )
-        coords_path, paths_split = minimize_moves(coords_path)
+        coords_path, paths_split = minimize_moves(coords_path,junction_distance=junction_distance)
         write_paths_to_svg(
             "final_unminimized_split.svg",
             coords_to_svg(
@@ -583,6 +584,8 @@ def animateProcess(new_paths, bounds, fname="out.gif"):
 @click.option("--miny", default=-1000, help="minimum y")
 @click.option("--maxy", default=1000, help="maximum y")
 @click.option("--maxy", default=1000, help="maximum y")
+@click.option("--junctiondist", default=400, help="junction distance")
+@click.option("--seed", default=0, help="random seed")
 @click.option("--minpath", default=0, help="min path length")
 @click.option("--merge", default=0, help="mege points closer than")
 @click.option("--prune", default=7, help="amount of pruning of small things")
@@ -605,7 +608,10 @@ def run(
     minpath,
     merge,
     minimize,
+    junctiondist,
+    seed,
 ):
+    random.seed(seed)
     imconvert = "convert"
     if os.name == "nt":
         imconvert = "imconvert"
@@ -653,6 +659,7 @@ def run(
             minPathLength=minpath,
             mergeSize=merge,
             minimizeMoves=minimize,
+            junction_distance=junctiondist,
         )
 
     elif not os.path.exists("potrace.svg") or overwrite:
