@@ -101,6 +101,8 @@ def write_paths_to_gcode(fname, paths):
                 gcodestring += f"\nG01 Z0"
             else:
                 gcodestring += f"\nG01 X{int(x1)} Y{int(y1)} Z0"
+            if j == len(path)-1:
+                gcodestring += f"\nG01 X{int(x1)} Y{int(y1)} Z1000"
 
         gcodestring += "\nG01 Z1000"
     with open(fname, "w") as f:
@@ -371,13 +373,13 @@ def processAutotraceSVG(
             y1 = round(np.imag(ele.start) + drawing_area[2])
             x2 = round(np.real(ele.end) + drawing_area[0])
             y2 = round(np.imag(ele.end) + drawing_area[2])
-            if j == 0:
+            if j == 0 and len(path) > 1:
                 coords.append([x1, y1])
             coords.append([x2, y2])
         if len(coords) >= minPathLength:
             coords_path.append(coords)
 
-    if minimizeMoves:
+    if minimizeMoves and len(coords_path) > 1:
         log.debug("coords_path length: {}", len(coords_path))
         write_paths_to_svg(
             "final_unminimized.svg",
@@ -386,6 +388,7 @@ def processAutotraceSVG(
             ),
             drawing_area,
         )
+        log.debug(junction_distance)
         coords_path, paths_split = minimize_moves(
             coords_path, junction_distance=junction_distance
         )
@@ -585,7 +588,10 @@ def animateProcess(new_paths, bounds, fname="out.gif"):
 @click.option("--maxx", default=1775, help="maximum x")
 @click.option("--miny", default=-1000, help="minimum y")
 @click.option("--maxy", default=1000, help="maximum y")
-@click.option("--maxy", default=1000, help="maximum y")
+# @click.option("--minx", default=500, help="minimum x")
+# @click.option("--maxx", default=1800, help="maximum x")
+# @click.option("--miny", default=-1400, help="minimum y")
+# @click.option("--maxy", default=1200, help="maximum y")
 @click.option("--junctiondist", default=400, help="junction distance")
 @click.option("--seed", default=0, help="random seed")
 @click.option("--minpath", default=0, help="min path length")
@@ -663,7 +669,6 @@ def run(
             minimizeMoves=minimize,
             junction_distance=junctiondist,
         )
-
     elif not os.path.exists("potrace.svg") or overwrite:
         if skeleton:
             cmd = f"{imconvert} {file} -resize {width}x{height} -background White -gravity center -extent {width}x{height} -threshold {threshold}%% thresholded.png"
