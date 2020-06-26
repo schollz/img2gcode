@@ -146,22 +146,22 @@ def minimize_moves(paths, junction_distance=400):
             endpoints.append(coords[0])
 
     paths_split = []
-    # for _, coords in enumerate(paths):
-    #     path = []
-    #     for _, coord in enumerate(coords):
-    #         isclose = False
-    #         for _, coord2 in enumerate(endpoints):
-    #             if dist2(coord, coord2) < junction_distance:
-    #                 if len(path) > 0:
-    #                     paths_split.append(path)
-    #                 path = []
-    #                 break
-    #         path.append(coord)
-    #     if len(path) > 0:
-    #         paths_split.append(path)
+    for _, coords in enumerate(paths):
+        path = []
+        for _, coord in enumerate(coords):
+            isclose = False
+            for _, coord2 in enumerate(endpoints):
+                if dist2(coord, coord2) < junction_distance:
+                    if len(path) > 0:
+                        paths_split.append(path)
+                    path = []
+                    break
+            path.append(coord)
+        if len(path) > 0:
+            paths_split.append(path)
 
-    # log.debug(len(paths))
-    # paths = paths_split.copy()
+    log.debug(len(paths))
+    paths = paths_split.copy()
     log.debug(len(paths))
 
     tries = int(8000 / len(paths))
@@ -237,6 +237,8 @@ def minimize_moves(paths, junction_distance=400):
                 continue
             d = dist2(onepath[i - 1][len(onepath[i - 1]) - 1], onepath[i][0])
             totaldist += math.sqrt(d)
+        if len(onepath) == 1:
+            totaldist = -1
         if totaldist < bestonepathscore and totaldist > 0:
             bestonepathscore = totaldist
             bestonepath = onepath.copy()
