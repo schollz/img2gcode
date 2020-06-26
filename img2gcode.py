@@ -101,7 +101,7 @@ def write_paths_to_gcode(fname, paths):
                 gcodestring += f"\nG01 Z0"
             else:
                 gcodestring += f"\nG01 X{int(x1)} Y{int(y1)} Z0"
-            if j == len(path)-1:
+            if j == len(path) - 1:
                 gcodestring += f"\nG01 X{int(x1)} Y{int(y1)} Z1000"
 
         gcodestring += "\nG01 Z1000"
