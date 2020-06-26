@@ -137,29 +137,34 @@ def minimize_moves(paths, junction_distance=400):
         return paths
     endpoints = []
     for _, coords in enumerate(paths):
+        if len(coords) == 0:
+            continue
         endpoints.append(coords[0])
-        endpoints.append(coords[len(coords) - 1])
+        if len(coords) > 1:
+            endpoints.append(coords[len(coords) - 1])
+        else:
+            endpoints.append(coords[0])
 
     paths_split = []
-    for _, coords in enumerate(paths):
-        path = []
-        for _, coord in enumerate(coords):
-            isclose = False
-            for _, coord2 in enumerate(endpoints):
-                if dist2(coord, coord2) < junction_distance:
-                    if len(path) > 0:
-                        paths_split.append(path)
-                    path = []
-                    break
-            path.append(coord)
-        if len(path) > 0:
-            paths_split.append(path)
+    # for _, coords in enumerate(paths):
+    #     path = []
+    #     for _, coord in enumerate(coords):
+    #         isclose = False
+    #         for _, coord2 in enumerate(endpoints):
+    #             if dist2(coord, coord2) < junction_distance:
+    #                 if len(path) > 0:
+    #                     paths_split.append(path)
+    #                 path = []
+    #                 break
+    #         path.append(coord)
+    #     if len(path) > 0:
+    #         paths_split.append(path)
 
-    log.debug(len(paths))
-    paths = paths_split.copy()
+    # log.debug(len(paths))
+    # paths = paths_split.copy()
     log.debug(len(paths))
 
-    tries = int(80000 / len(paths))
+    tries = int(8000 / len(paths))
     log.debug("minimizing moves for {} tries", tries)
 
     # greedy algorithm
@@ -174,7 +179,10 @@ def minimize_moves(paths, junction_distance=400):
         onepath = []
         paths_finished = {}
         for i, coords in enumerate(paths):
-            if i == 0:
+            if len(coords) == 0:
+                continue
+
+            if len(onepath) == 0:
                 onepath.append(coords)
                 paths_finished[i] = {}
 
@@ -185,7 +193,7 @@ def minimize_moves(paths, junction_distance=400):
             onepathnext = onepath.copy()
             bestpath = -1
             for j, coords2 in enumerate(paths):
-                if j == i or j in paths_finished:
+                if j == i or j in paths_finished or len(coords2) == 0:
                     continue
                 cs2 = coords2[0]
                 ce2 = coords2[len(coords2) - 1]
@@ -281,7 +289,8 @@ def coords_to_svg(coords_path, simplifylevel=0, minPathLength=0):
     new_new_paths = []
     for _, coords in enumerate(coords_path):
         simplified = coords
-        if simplifylevel > 1:
+        if simplifylevel > 0:
+            log.debug("doing simplification")
             simplified = simplify_coords(simplified, simplifylevel)
 
         num_coords += len(coords)
@@ -289,6 +298,12 @@ def coords_to_svg(coords_path, simplifylevel=0, minPathLength=0):
 
         new_path = []
         for i, coord in enumerate(simplified):
+            if i == 0 and len(simplified) == 1:
+                path = Line(
+                    complex(simplified[i][0], simplified[i][1]),
+                    complex(simplified[i][0], simplified[i][1]),
+                )
+                new_path.append(path)
             if i == 0:
                 continue
             path = Line(
@@ -315,8 +330,8 @@ def processAutotraceSVG(
     minimizeMoves=True,
     junction_distance=400,
 ):
-    if minPathLength < 1:
-        minPathLength = 1
+    if minPathLength < 0:
+        minPathLength = 0
     paths, attributes, svg_attributes = svg2paths2(fnamein)
     log.info("have {} paths", len(paths))
 
@@ -325,8 +340,8 @@ def processAutotraceSVG(
     new_paths = []
     for ii, path in enumerate(attributes):
         new_path = []
-        if "000000" not in attributes[ii]["style"]:
-            continue
+        # if "000000" not in attributes[ii]["style"]:
+        #     continue
         path = parse_path(attributes[ii]["d"])
         for jj, ele in enumerate(path):
             x1 = round(np.real(ele.start) + drawing_area[0])
@@ -363,7 +378,6 @@ def processAutotraceSVG(
             new_paths.append(new_path)
 
     # translate to bounding area
-
     new_new_paths = []
     coords_path = []
     for i, path in enumerate(new_paths):
@@ -373,13 +387,20 @@ def processAutotraceSVG(
             y1 = round(np.imag(ele.start) + drawing_area[2])
             x2 = round(np.real(ele.end) + drawing_area[0])
             y2 = round(np.imag(ele.end) + drawing_area[2])
-            if j == 0 and len(path) > 1:
+            if j == 0 and len(path) > 0:
                 coords.append([x1, y1])
             coords.append([x2, y2])
         if len(coords) >= minPathLength:
             coords_path.append(coords)
 
+    write_paths_to_svg(
+        "new_paths.svg",
+        coords_to_svg(coords_path, simplifylevel=0, minPathLength=0),
+        drawing_area,
+    )
+
     if minimizeMoves and len(coords_path) > 1:
+        log.debug("doing minimization")
         log.debug("coords_path length: {}", len(coords_path))
         write_paths_to_svg(
             "final_unminimized.svg",
@@ -400,7 +421,9 @@ def processAutotraceSVG(
             drawing_area,
         )
     log.debug("coords_path length: {}", len(coords_path))
+
     if mergeSize > 1:
+        log.debug("doing merge")
         coords_path = merge_similar(coords_path, mergeSize ** 2)
 
     new_new_paths = coords_to_svg(
@@ -433,7 +456,7 @@ def processSVG(
             x2 = np.real(ele.end)
             y2 = np.imag(ele.end)
             if "CubicBezier" in str(ele):
-                n_segments = 2
+                n_segments = 5
                 # get curve segment generator
                 curve = cubic_bezier_sample(
                     ele.start, ele.control1, ele.control2, ele.end
@@ -497,15 +520,15 @@ def processSVG(
             coords.append([x2, y2])
 
         simplified = coords
-        simplified = simplify_coords(simplified, simplifylevel)
+        if simplifylevel > 0:
+            simplified = simplify_coords(simplified, simplifylevel)
 
         num_coords += len(coords)
         num_coords_simplified += len(simplified)
 
         new_path = []
         for i, coord in enumerate(simplified):
-
-            if i == 0:
+            if i == 0 and len(simplified) > 0:
                 continue
             path = Line(
                 complex(simplified[i - 1][0], simplified[i - 1][1]),
@@ -592,12 +615,12 @@ def animateProcess(new_paths, bounds, fname="out.gif"):
 # @click.option("--maxx", default=1800, help="maximum x")
 # @click.option("--miny", default=-1400, help="minimum y")
 # @click.option("--maxy", default=1200, help="maximum y")
-@click.option("--junctiondist", default=400, help="junction distance")
+@click.option("--junctiondist", default=0, help="junction distance")
 @click.option("--seed", default=0, help="random seed")
 @click.option("--minpath", default=0, help="min path length")
 @click.option("--merge", default=0, help="mege points closer than")
-@click.option("--prune", default=7, help="amount of pruning of small things")
-@click.option("--simplify", default=5.1, help="simplify level", type=float)
+@click.option("--prune", default=0, help="amount of pruning of small things")
+@click.option("--simplify", default=0, help="simplify level", type=float)
 @click.option("--threshold", default=60, help="percent threshold (0-100)")
 def run(
     folder,
